@@ -62,7 +62,7 @@ fun ChessBoardView(
                         val currentPos = Position(row, col)
                         val isDarkCell = (row + col) % 2 == 1
                         val piece = gameState.pieces.find { it.position == currentPos }
-                        val isValidMove = gameState.validMoves.contains(currentPos)
+                        val isValidMove = gameState.validMoves.any { it.to == currentPos }
                         val isSelected = gameState.selectedPosition == currentPos
 
                         val cellBackground = when {

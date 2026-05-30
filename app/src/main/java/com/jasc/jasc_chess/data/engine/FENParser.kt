@@ -4,33 +4,46 @@ import com.jasc.jasc_chess.model.*
 
 object FENParser {
     fun parse(fen: String, size: Int): List<ChessPiece> {
-        val pieces = mutableListOf<ChessPiece>()
-        val boardPart = fen.split(" ")[0]
-        val rows = boardPart.split("/")
+        val piezas = mutableListOf<ChessPiece>()
+        val tableroPart = fen.split(" ")[0]
+        val filas = tableroPart.split("/")
 
-        for (r in 0 until minOf(rows.size, size)) {
-            var c = 0
-            for (char in rows[r]) {
+        filas.forEachIndexed { rowIndex, rowString ->
+            if (rowIndex >= size) return@forEachIndexed
+
+            var colIndex = 0
+            for (char in rowString) {
                 if (char.isDigit()) {
-                    c += char.digitToInt()
-                } else if (c < size) {
+                    colIndex += char.toString().toInt()
+                } else {
                     val color = if (char.isUpperCase()) PieceColor.ORO else PieceColor.PLATA
-                    val type = when (char.lowercaseChar()) {
-                        'r' -> PieceType.TORRE
-                        'n' -> PieceType.CABALLO
-                        'b' -> PieceType.ALFIL
-                        'q' -> PieceType.REINA
-                        'k' -> PieceType.REY
-                        'p' -> PieceType.PEON
-                        else -> PieceType.PEON
+                    val type = obtenerTipo(char) // Llama a la función de abajo
+
+                    if (colIndex < size) {
+                        piezas.add(
+                            ChessPiece(
+                                id = "${type}_${color}_${rowIndex}_${colIndex}",
+                                type = type,
+                                color = color,
+                                position = Position(rowIndex, colIndex)
+                            )
+                        )
+                        colIndex++
                     }
-                    // ID Único basado en tipo, color y posición para evitar colisiones
-                    val id = "${type}_${color}_${r}_${c}"
-                    pieces.add(ChessPiece(id, type, color, Position(r, c), hasMoved = false))
-                    c++
                 }
             }
         }
-        return pieces
+        return piezas
+    }
+
+    // Esta función ya no estará en gris porque es usada arriba
+    private fun obtenerTipo(c: Char): PieceType = when (c.lowercaseChar()) {
+        'p' -> PieceType.PEON
+        'r' -> PieceType.TORRE
+        'n' -> PieceType.CABALLO
+        'b' -> PieceType.ALFIL
+        'q' -> PieceType.REINA
+        'k' -> PieceType.REY
+        else -> PieceType.PEON
     }
 }

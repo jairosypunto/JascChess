@@ -1,6 +1,7 @@
 package com.jasc.jasc_chess.data.engine
 
 import com.jasc.jasc_chess.model.*
+import com.jasc.jasc_chess.game.GameState // Importante: Asegura este import
 
 object AIEngine {
 
@@ -25,6 +26,7 @@ object AIEngine {
         var maxEval = Int.MIN_VALUE
 
         val movimientos = aliadas.flatMap { p ->
+            // Esta llamada ahora usa la sobrecarga en MoveValidator y funcionará perfectamente
             MoveValidator.obtenerMovimientosValidos(p, piezas, size).map { p to it }
         }.sortedByDescending { (_, dest) ->
             if (piezas.any { it.position == dest && it.color == PieceColor.ORO }) 1000 else 0
@@ -74,18 +76,14 @@ object AIEngine {
         for (p in piezas) {
             val v = obtenerValorPieza(p.type)
             val material = if (p.color == PieceColor.PLATA) v else -v
-
             val centroMin = size / 2 - 1
             val centroMax = size / 2
             val central = if (p.position.row in centroMin..centroMax && p.position.col in centroMin..centroMax) 20 else 0
             val desarrollo = if (p.position.row == 0 && (p.type == PieceType.CABALLO || p.type == PieceType.ALFIL)) -15 else 0
-
             score += material + (if (p.color == PieceColor.PLATA) (central + desarrollo) else -(central + desarrollo))
         }
-
         if (estaElReyEnJaqueEnSimulacion(PieceColor.PLATA, piezas, size)) score -= 500
         if (estaElReyEnJaqueEnSimulacion(PieceColor.ORO, piezas, size)) score += 500
-
         return score
     }
 
@@ -96,8 +94,6 @@ object AIEngine {
     fun estaElReyEnJaqueEnSimulacion(color: PieceColor, piezas: List<ChessPiece>, size: Int): Boolean {
         val rey = piezas.find { it.type == PieceType.REY && it.color == color } ?: return false
         val colorOponente = if (color == PieceColor.ORO) PieceColor.PLATA else PieceColor.ORO
-
-        // Nombre exacto definido en MoveValidator
         return MoveValidator.esCasillaAmenazadaPorGeometria(rey.position, colorOponente, piezas, size)
     }
 }

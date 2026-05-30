@@ -2,9 +2,12 @@ package com.jasc.jasc_chess.menu
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -31,11 +34,51 @@ fun MainMenuScreen(
         Image(painter = painterResource(id = R.drawable.fondo), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)))
 
+// --- 2. ESQUINA SUPERIOR DERECHA: TU LOGO COMO BOTÓN DE PERFIL ---
+
+// Aquí reemplazamos el Icon(Icons.Default.Person) por tu imagen
+
         IconButton(
+
             onClick = { navController.navigate("perfil") },
-            modifier = Modifier.align(Alignment.TopEnd).padding(24.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.2f))
+
+            modifier = Modifier
+
+                .align(Alignment.TopEnd)
+
+                .padding(24.dp)
+
+                .size(50.dp)
+
+                .clip(CircleShape)
+
+                .background(Color.White.copy(alpha = 0.2f))
+
         ) {
-            Icon(Icons.Default.Person, contentDescription = "Perfil", tint = Color.White)
+
+            Image(
+
+                painter = painterResource(id = R.drawable.perfil), // El mismo logo
+
+                contentDescription = "Ir a Perfil",
+
+                contentScale = ContentScale.Crop,
+
+                modifier = Modifier.fillMaxSize()
+
+            )
+
+        }
+
+        // --- BOTÓN DISIMULADO DE HISTORIA (NUEVO) ---
+        // Ubicado en la parte superior izquierda, sutil y elegante
+        TextButton(
+            onClick = { navController.navigate("history_screen") },
+            modifier = Modifier.align(Alignment.TopStart).padding(24.dp)
+        ) {
+            Icon(Icons.Default.Info, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Historia", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
         }
 
         Column(
@@ -43,16 +86,16 @@ fun MainMenuScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Image(painter = painterResource(id = R.drawable.tradicional_caballo_negro), contentDescription = "Logo", modifier = Modifier.size(120.dp).padding(bottom = 24.dp))
+            Image(painter = painterResource(id = R.drawable.tradicional_caballo_negro), contentDescription = "Logo", modifier = Modifier.size(100.dp).padding(bottom = 24.dp))
             Text(text = "JASC CHESS", fontSize = 32.sp, fontWeight = FontWeight.Black, color = Color.White, modifier = Modifier.padding(bottom = 48.dp))
 
             val btnColor = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5A2B))
             val accentColor = ButtonDefaults.buttonColors(containerColor = Color(0xFFB45309))
 
-            // JUGAR PARTIDA LIBRE
+            // 1. JUGAR PARTIDA LIBRE
             Button(
                 onClick = {
-                    boardViewModel.prepararJuego(8, GameMode.LIBRE, false)
+                    boardViewModel.cargarModo(8, GameMode.LIBRE, null)
                     navController.navigate("juego")
                 },
                 modifier = Modifier.fillMaxWidth(0.6f).height(50.dp), colors = btnColor
@@ -60,22 +103,10 @@ fun MainMenuScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // PRÁCTICA 8X8 (PUZZLE)
+            // 3. PRÁCTICA 4X4
             Button(
                 onClick = {
-                    boardViewModel.prepararJuego(8, GameMode.PUZZLE, true)
-                    boardViewModel.iniciarNivelDePrueba()
-                    navController.navigate("juego")
-                },
-                modifier = Modifier.fillMaxWidth(0.6f).height(50.dp), colors = btnColor
-            ) { Text("Prácticas (8x8)", fontSize = 16.sp) }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // PRÁCTICA 4X4 (PUZZLE)
-            Button(
-                onClick = {
-                    boardViewModel.prepararJuego(4, GameMode.PUZZLE, true)
+                    boardViewModel.cargarModo(4, GameMode.LIBRE, null)
                     navController.navigate("juego")
                 },
                 modifier = Modifier.fillMaxWidth(0.6f).height(50.dp), colors = accentColor
