@@ -30,9 +30,9 @@ fun ChessBoardView(
     onCellClick: (Position) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // ESTA ES LA CLAVE: Aquí convertimos el flujo a estado que Compose entiende
     val gameState by gameStateFlow.collectAsState()
 
+    // Definición de colores
     val colorOro = Color(0xFFD4AF37)
     val colorPlata = Color(0xFFC0C0C0)
     val casillaClara = Color(0xFFF5F5DC)
@@ -40,10 +40,11 @@ fun ChessBoardView(
     val seleccion = Color(0xFFEFE5DA)
     val movimientoVal = Color(0xFF3A5F41)
 
+    // Contenedor principal del tablero
     Box(
         modifier = modifier
             .padding(16.dp)
-            .aspectRatio(1f)
+            .aspectRatio(1f) // Mantiene la forma cuadrada
             .shadow(12.dp, shape = RoundedCornerShape(16.dp))
             .background(Color(0xFF8C8C8C))
             .border(8.dp, Color(0xFF595959), RoundedCornerShape(16.dp))
@@ -53,12 +54,11 @@ fun ChessBoardView(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(4.dp))
-                .background(Color(0xCCEEEEEE))
-                .border(2.dp, Color.White.copy(alpha = 0.6f))
         ) {
-            for (row in 0..7) {
+            // Generación dinámica del tablero 8x8
+            for (row in 0 until gameState.boardSize) { // Usamos gameState.boardSize para flexibilidad
                 Row(modifier = Modifier.weight(1f)) {
-                    for (col in 0..7) {
+                    for (col in 0 until gameState.boardSize) {
                         val currentPos = Position(row, col)
                         val isDarkCell = (row + col) % 2 == 1
                         val piece = gameState.pieces.find { it.position == currentPos }

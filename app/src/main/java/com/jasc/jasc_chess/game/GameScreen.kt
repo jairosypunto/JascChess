@@ -1,18 +1,13 @@
 package com.jasc.jasc_chess.game
 
+import androidx.lifecycle.viewmodel.compose.viewModel
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,18 +26,14 @@ import coil.compose.AsyncImage
 import com.jasc.jasc_chess.R
 import com.jasc.jasc_chess.model.*
 import com.jasc.jasc_chess.ui.components.TimerComponent
-import com.jasc.jasc_chess.ui.components.ChessPieceView
+
 @Composable
-fun GameScreen(
-    viewModel: BoardViewModel = BoardViewModel()
-) {
+fun GameScreen(viewModel: BoardViewModel = viewModel()) {
     val gameState by viewModel.gameState.collectAsState()
     val scrollState = rememberScrollState()
 
     var imageUri by remember { mutableStateOf<Uri?>(null) }
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? -> imageUri = uri }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? -> imageUri = uri }
 
     val temas = listOf(
         Pair(Color(0xFFF8FAFC), Color(0xFF1E3A8A)), Pair(Color(0xFFE5C185), Color(0xFF4A2E1B)),
@@ -56,141 +47,148 @@ fun GameScreen(
     val colores = temas[gameState.temaActual % temas.size]
 
     Scaffold { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color(0xFF0F1E36))
-                .verticalScroll(scrollState),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Sección de Perfil
-            Surface(
-                modifier = Modifier
-                    .padding(top = 16.dp, bottom = 20.dp)
-                    .size(60.dp)
-                    .clip(CircleShape)
-                    .border(2.dp, Color(0xFFFFD700), CircleShape)
-                    .clickable { launcher.launch("image/*") },
-                color = Color(0xFF1E293B)
+        // 1. Usamos un Box principal para permitir superposiciones (Overlays)
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues).background(Color(0xFF0F1E36))) {
+
+            Column(
+                modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (imageUri != null) {
-                    AsyncImage(model = imageUri, contentDescription = "Foto de perfil", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                } else {
-                    Box(contentAlignment = Alignment.Center) { Text("👤", fontSize = 28.sp) }
-                }
-            }
-
-            // Información y Reloj
-            Column(modifier = Modifier.fillMaxWidth().background(Color(0x1F000000)), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(modifier = Modifier.padding(top = 16.dp, bottom = 12.dp).background(Color(0xFF1E293B), RoundedCornerShape(20.dp)).border(1.dp, Color(0xFFFFD700), RoundedCornerShape(20.dp)).padding(horizontal = 24.dp, vertical = 6.dp).clickable { viewModel.cambiarDificultad() }) {
-                    Text(text = "NIVEL: ${gameState.nivelActual.name}", color = Color(0xFFFFD700), fontSize = 12.sp, fontWeight = FontWeight.Black)
+                // Perfil
+                Surface(modifier = Modifier.padding(top = 16.dp, bottom = 20.dp).size(60.dp).clip(CircleShape).border(2.dp, Color(0xFFFFD700), CircleShape).clickable { launcher.launch("image/*") }, color = Color(0xFF1E293B)) {
+                    if (imageUri != null) AsyncImage(model = imageUri, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    else Box(contentAlignment = Alignment.Center) { Text("👤", fontSize = 28.sp) }
                 }
 
-                Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp).shadow(4.dp, RoundedCornerShape(12.dp)).background(Color(0xFF1E293B), RoundedCornerShape(12.dp)).clickable { viewModel.alternarActividadReloj() }) {
-                    val juegoActivo = !gameState.esJaqueMate && !gameState.esTablas && !gameState.esAhogado
-                    if (juegoActivo) {
-                        TimerComponent(oroTimeMillis = gameState.oroTimeMillis, plataTimeMillis = gameState.plataTimeMillis, isOroTurn = gameState.currentTurn == PieceColor.ORO, modifier = Modifier.fillMaxWidth())
-                    } else {
-                        Box(modifier = Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
-                            Text(text = "PARTIDA LIBRE (TOQUE PARA INICIAR)", color = Color(0xFF94A3B8), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                // Info partida
+                Column(modifier = Modifier.fillMaxWidth().background(Color(0x1F000000)), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(modifier = Modifier.padding(top = 16.dp, bottom = 12.dp).background(Color(0xFF1E293B), RoundedCornerShape(20.dp)).border(1.dp, Color(0xFFFFD700), RoundedCornerShape(20.dp)).padding(horizontal = 24.dp, vertical = 6.dp).clickable { viewModel.cambiarDificultad() }) {
+                        Text(text = "NIVEL: ${gameState.nivelActual.name}", color = Color(0xFFFFD700), fontSize = 12.sp, fontWeight = FontWeight.Black)
+                    }
+                    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp).shadow(4.dp, RoundedCornerShape(12.dp)).background(Color(0xFF1E293B), RoundedCornerShape(12.dp)).clickable { viewModel.alternarModoTiempo() }) {
+                        if (gameState.modoTiempoActivado) TimerComponent(gameState.oroTimeMillis, gameState.plataTimeMillis, gameState.currentTurn == PieceColor.ORO, Modifier.fillMaxWidth())
+                        else Box(modifier = Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) { Text(text = "⏱️ TIEMPO DESACTIVADO", color = Color(0xFF94A3B8), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                    }
+                    Text(text = if (gameState.currentTurn == PieceColor.ORO) "TURNO: IMPERIO 👑" else "TURNO: IA PLATA ⚔️", color = if (gameState.currentTurn == PieceColor.ORO) Color(0xFFF59E0B) else Color(0xFF38BDF8), fontSize = 13.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(vertical = 12.dp))
+                }
+                if (gameState.esJaque) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 4.dp)
+                            .background(Color.Red.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+                            .padding(8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("¡JAQUE!", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
+                }
+                // Tablero completo
+                Box(modifier = Modifier.padding(horizontal = 1.dp, vertical = 1.dp).fillMaxWidth().aspectRatio(1f).shadow(20.dp, RoundedCornerShape(6.dp)).background(Color(0xFF4A2E1B)).border(4.dp, Color(0xFF2D1B10), RoundedCornerShape(6.dp)).padding(start = 4.dp, end = 4.dp, bottom = 4.dp, top = 12.dp), contentAlignment = Alignment.Center) {
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        Column(modifier = Modifier.fillMaxHeight().width(12.dp).padding(vertical = 4.dp), verticalArrangement = Arrangement.SpaceAround, horizontalAlignment = Alignment.CenterHorizontally) {
+                            for (i in gameState.boardSize downTo 1) Text(text = i.toString(), color = Color(0xFFE2E8F0), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
-                    }
-                }
-                Text(text = if (gameState.currentTurn == PieceColor.ORO) "TURNO: IMPERIO 👑" else "TURNO: IA PLATA ⚔️", color = if (gameState.currentTurn == PieceColor.ORO) Color(0xFFF59E0B) else Color(0xFF38BDF8), fontSize = 13.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(vertical = 12.dp))
-            }
-
-            // Alertas de Estado
-            if (gameState.esJaqueMate) {
-                Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp).fillMaxWidth().shadow(8.dp, RoundedCornerShape(10.dp)).background(Color(0xE614532D), RoundedCornerShape(10.dp)).border(2.dp, Color(0xFFFFD700), RoundedCornerShape(10.dp)).padding(12.dp), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = "GLORIA ABSOLUTA", color = Color(0xFFFFD700), fontSize = 18.sp, fontWeight = FontWeight.Black)
-                        Text(text = "GANADOR: ${gameState.ganador ?: "PARTIDA FINALIZADA"}", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            } else if (gameState.esAhogado) {
-                Box(modifier = Modifier.padding(14.dp).fillMaxWidth().background(Color(0xFF64748B), RoundedCornerShape(8.dp)).padding(12.dp), contentAlignment = Alignment.Center) {
-                    Text(text = "TABLAS (REY AHOGADO)", color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            } else if (gameState.esJaque) {
-                Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 2.dp).fillMaxWidth().shadow(10.dp, RoundedCornerShape(8.dp)).background(Color(0xFF991B1B), RoundedCornerShape(8.dp)).border(2.dp, Color(0xFFFFD700), RoundedCornerShape(8.dp)).padding(vertical = 12.dp, horizontal = 8.dp), contentAlignment = Alignment.Center) {
-                    Text(text = "⚠️ ¡ATENCIÓN, ESTÁS EN JAQUE! ⚠️", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, letterSpacing = 1.2.sp)
-                }
-            }
-
-            // Tablero
-            Box(modifier = Modifier.padding(horizontal = 1.dp, vertical = 1.dp).fillMaxWidth().aspectRatio(1f).shadow(20.dp, RoundedCornerShape(6.dp)).background(Color(0xFF4A2E1B)).border(4.dp, Color(0xFF2D1B10), RoundedCornerShape(6.dp)).padding(start = 4.dp, end = 4.dp, bottom = 4.dp, top = 12.dp), contentAlignment = Alignment.Center) {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    Column(modifier = Modifier.fillMaxHeight().width(12.dp).padding(vertical = 4.dp), verticalArrangement = Arrangement.SpaceAround, horizontalAlignment = Alignment.CenterHorizontally) {
-                        for (i in 8 downTo 1) { Text(text = i.toString(), color = Color(0xFFE2E8F0), fontSize = 10.sp, fontWeight = FontWeight.Bold) }
-                    }
-                    Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                        Box(modifier = Modifier.weight(1f).fillMaxWidth().border(1.5.dp, Color(0xFF1E1B4B))) {
-                            Column(modifier = Modifier.fillMaxSize()) {
-                                for (row in 0..7) {
-                                    Row(modifier = Modifier.weight(1f)) {
-                                        for (col in 0..7) {
-                                            val currentPos = Position(row, col)
-                                            val isDarkCell = (row + col) % 2 == 1
-                                            val piece = gameState.pieces.find { it.position == currentPos }
-                                            val isSelected = gameState.selectedPosition == currentPos
-                                            val isValidMove = gameState.validMoves.contains(currentPos)
-                                            val escalaFinal = (if (isSelected || gameState.fichaInspeccionada == currentPos) 2.0f else 1.0f) * (if (gameState.modoJuego == GameMode.PUZZLE) 1.15f else 1.0f)
-
-                                            Box(modifier = Modifier.weight(1f).fillMaxHeight().background(when {
-                                                isSelected -> Color(0xB3F59E0B)
-                                                isValidMove -> Color(0xAA10B981)
-                                                isDarkCell -> colores.second
-                                                else -> colores.first
-                                            }).border(0.3.dp, if (isDarkCell) Color(0x1AFFFFFF) else Color(0x1F000000)).clickable(enabled = gameState.partidaIniciada || gameState.modoJuego == GameMode.PUZZLE) {
-                                                viewModel.onCellSelected(currentPos) }, contentAlignment = Alignment.Center) {
-                                                piece?.let { p ->
-                                                    val resId = obtenerResourcePieza(p.type, p.color, gameState.estiloSeleccionado)
-                                                    if (resId != null) Image(painter = painterResource(id = resId), contentDescription = null, modifier = Modifier.fillMaxSize().graphicsLayer(scaleX = escalaFinal, scaleY = escalaFinal))
-                                                    else Text(text = obtenerSimboloTexto(p.type, gameState.estiloSeleccionado, p.color), fontSize = (38 * (if (gameState.modoJuego == GameMode.PUZZLE) 1.15f else 1.0f)).sp, color = Color.White, fontWeight = FontWeight.Black)
-                                                }
-                                            }
+                        Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                            for (row in 0 until gameState.boardSize) {
+                                Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                                    for (col in 0 until gameState.boardSize) {
+                                        val currentPos = Position(row, col)
+                                        CasillaView(currentPos, gameState, colores) {
+                                            if (gameState.modoJuego == GameMode.PUZZLE) {
+                                                if (gameState.selectedPosition == null) viewModel.onCellSelected(currentPos)
+                                                else viewModel.validarJugadaPuzzle(gameState.selectedPosition!!, currentPos)
+                                            } else { viewModel.onCellSelected(currentPos) }
                                         }
                                     }
                                 }
                             }
-                        }
-                        Row(modifier = Modifier.fillMaxWidth().height(18.dp).padding(bottom = 2.dp), horizontalArrangement = Arrangement.SpaceAround) {
-                            listOf("a", "b", "c", "d", "e", "f", "g", "h").forEach { Text(text = it, color = Color(0xFFE2E8F0), fontSize = 10.sp, fontWeight = FontWeight.Black) }
+                            Row(modifier = Modifier.fillMaxWidth().height(18.dp).padding(bottom = 2.dp), horizontalArrangement = Arrangement.SpaceAround) {
+                                listOf("a", "b", "c", "d", "e", "f", "g", "h").take(gameState.boardSize).forEach { Text(text = it, color = Color(0xFFE2E8F0), fontSize = 10.sp, fontWeight = FontWeight.Black) }
+                            }
                         }
                     }
                 }
+
+                CementerioRow("CAPTURAS IA: ", gameState.piezasComidasPlata, gameState)
+                CementerioRow("CAPTURAS JUGADOR: ", gameState.piezasComidasOro, gameState)
+
+                // Botones
+                if (gameState.modoJuego == GameMode.PUZZLE) {
+                    Button(onClick = { viewModel.siguientePuzzle() }, modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) { Text("SIGUIENTE PUZZLE") }
+                    Button(onClick = { viewModel.configurarPartida(8, GameMode.LIBRE) }, modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A))) { Text("VOLVER A PARTIDA LIBRE") }
+                } else {
+                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { viewModel.configurarPartida(8, GameMode.PUZZLE) }, modifier = Modifier.weight(1f)) { Text("PRÁCTICA 8X8") }
+                        OutlinedButton(onClick = { viewModel.configurarPartida(4, GameMode.PUZZLE) }, modifier = Modifier.weight(1f)) { Text("PUZZLE 4X4") }
+                    }
+                }
+
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    BotonCircularMedieval({ viewModel.reiniciarPartida() }, "🔄", "REINICIAR", Color(0xFFB45309))
+                    BotonCircularMedieval({ viewModel.cambiarDificultad() }, "🏆", "NIVEL", Color(0xFF6D28D9))
+                    BotonCircularMedieval({ viewModel.cambiarEstiloFichas() }, "♟️", "PIEZAS", Color(0xFF1E3A8A))
+                    BotonCircularMedieval({ viewModel.deshacerJugada() }, "↩️", "DESHACER", Color(0xFF78350F))
+                    BotonCircularMedieval({ viewModel.obtenerPistaAyuda() }, "💡", "PISTA", Color(0xFFD97706))
+                }
+                FooterFirma()
+                Spacer(modifier = Modifier.height(40.dp))
             }
 
-            CementerioRow("CAPTURAS IA: ", gameState.piezasComidasPlata, gameState)
-            CementerioRow("CAPTURAS JUGADOR: ", gameState.piezasComidasOro, gameState)
-
-            // --- LÓGICA DE BOTONES SEPARADA ---
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                if (gameState.modoJuego == GameMode.PUZZLE) {
-                    Button(onClick = { viewModel.siguientePuzzle() }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) { Text("SIGUIENTE PUZZLE") }
-                    Button(onClick = { viewModel.iniciarPartidaLibre() }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A))) { Text("VOLVER A PARTIDA LIBRE") }
-                } else {
-                    OutlinedButton(onClick = { viewModel.cargarNivel(43) }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) { Text("IR A PRÁCTICAS / PUZZLE") }
+            // 2. AVISOS DE ESTADO (Jaque Mate / Tablas) - SE DIBUJAN SOBRE EL TABLERO
+            if (gameState.esJaqueMate) {
+                Surface(color = Color.Black.copy(alpha = 0.85f), modifier = Modifier.fillMaxSize()) {
+                    Column(verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("¡JAQUE MATE!", color = Color.Red, fontSize = 48.sp, fontWeight = FontWeight.Black)
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Button(onClick = { viewModel.reiniciarPartida() }) { Text("JUGAR DE NUEVO") }
+                    }
+                }
+// Corrección del overlay de Tablas en GameScreen.kt
+            } else if (gameState.esTablas || gameState.esAhogado) {
+                Surface(color = Color.Black.copy(alpha = 0.8f), modifier = Modifier.fillMaxSize()) {
+                    Column(verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("¡JUEGO TERMINADO: TABLAS!", color = Color.Yellow, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Button(onClick = { viewModel.reiniciarPartida() }) { Text("JUGAR DE NUEVO") }
+                    }
                 }
             }
+        }
+    }
+}
+@Composable
+fun RowScope.CasillaView(position: Position, gameState: GameState, colores: Pair<Color, Color>, onClick: () -> Unit) {
+    val isDarkCell = (position.row + position.col) % 2 == 1
+    val piece = gameState.pieces.find { it.position == position }
 
-            // Controles de juego
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                BotonCircularMedieval({ viewModel.reiniciarPartida() }, "🔄", "REINICIAR", Color(0xFFB45309))
-                BotonCircularMedieval({ viewModel.cambiarDificultad() }, "🏆", "NIVEL", Color(0xFF6D28D9))
-                BotonCircularMedieval({ viewModel.cambiarEstiloFichas() }, "♟️", "PIEZAS", Color(0xFF1E3A8A))
-                BotonCircularMedieval({ viewModel.deshacerJugada() }, "↩️", "DESHACER", Color(0xFF78350F))
-                BotonCircularMedieval({ viewModel.obtenerPistaAyuda() }, "💡", "PISTA", Color(0xFFD97706))
+    Box(
+        modifier = Modifier.weight(1f).fillMaxHeight().background(
+            when {
+                gameState.selectedPosition == position -> Color(0xB3F59E0B)
+                gameState.validMoves.contains(position) -> Color(0xAA10B981)
+                isDarkCell -> colores.second
+                else -> colores.first
             }
-            IconButton(onClick = { viewModel.cambiarTema() }, modifier = Modifier.padding(8.dp).background(Color.White.copy(alpha = 0.1f), CircleShape)) { Text("🎨", fontSize = 20.sp) }
-
-            FooterFirma()
-            Spacer(modifier = Modifier.height(40.dp))
+        ).clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        piece?.let { p ->
+            val resId = obtenerResourcePieza(p.type, p.color, gameState.estiloSeleccionado)
+            if (resId != null) {
+                Image(painter = painterResource(id = resId), contentDescription = null, modifier = Modifier.fillMaxSize())
+            } else {
+                // AQUÍ ESTABA EL ERROR: No estabas llamando al símbolo si no había imagen
+                Text(
+                    text = obtenerSimboloTexto(p.type, gameState.estiloSeleccionado, p.color),
+                    fontSize = 24.sp
+                )
+            }
         }
     }
 }
 
+// MANTENEMOS TUS FUNCIONES EXACTAS: SIN CAMBIOS NI MODIFICACIONES
 @Composable
 fun CementerioRow(label: String, piezas: List<ChessPiece>, gameState: GameState) {
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).background(Color(0x33FFFFFF), RoundedCornerShape(6.dp)).padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -214,48 +212,16 @@ fun FooterFirma() {
 }
 
 @Composable
-fun BotonCircularMedieval(
-    onClick: () -> Unit,
-    icono: String,
-    rotulo: String,
-    fondoColor: Color
-) {
+fun BotonCircularMedieval(onClick: () -> Unit, icono: String, rotulo: String, fondoColor: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
-            modifier = Modifier
-                .size(54.dp)
-                .shadow(6.dp, CircleShape)
-                .clip(CircleShape) // Importante para que el efecto de clic no se salga del círculo
-                .background(fondoColor)
-                .border(2.dp, Color(0xFFFFD700), CircleShape)
-                .clickable { onClick() }, // Aquí se aplica la animación de onda (ripple) por defecto
+            modifier = Modifier.size(54.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(fondoColor).border(2.dp, Color(0xFFFFD700), CircleShape).clickable { onClick() },
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = icono,
-                fontSize = 22.sp
-            )
+            Text(text = icono, fontSize = 22.sp)
         }
         Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = rotulo,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = Color(0xFF94A3B8)
-        )
-    }
-}
-
-@Composable
-fun CasillaView(position: Position, gameState: GameState) {
-    // 1. Buscamos si hay una pieza en esta posición específica
-    val piezaEnCasilla = gameState.pieces.find { it.position == position }
-
-    Box(modifier = Modifier.size(50.dp).background(Color.LightGray)) {
-        // 2. SI HAY UNA PIEZA, LLAMAMOS A ChessPieceView
-        if (piezaEnCasilla != null) {
-            ChessPieceView(piece = piezaEnCasilla)
-        }
+        Text(text = rotulo, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF94A3B8))
     }
 }
 

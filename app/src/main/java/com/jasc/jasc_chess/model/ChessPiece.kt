@@ -10,5 +10,5 @@ data class ChessPiece(
     val type: PieceType,
     val color: PieceColor,
     val position: Position,
-    val hasMoved: Boolean = false // <--- AÑADE ESTA LÍNEA
+    val hasMoved: Boolean = false // <--- Si le das un valor por defecto, ya no estás obligado a ponerlo siempre
 )

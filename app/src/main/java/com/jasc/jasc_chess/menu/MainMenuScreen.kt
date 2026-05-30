@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.jasc.jasc_chess.R
 import com.jasc.jasc_chess.game.BoardViewModel
+import com.jasc.jasc_chess.model.GameMode
 
 @Composable
 fun MainMenuScreen(
@@ -27,70 +28,58 @@ fun MainMenuScreen(
     boardViewModel: BoardViewModel
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
-        // 1. IMAGEN DE FONDO
-        Image(
-            painter = painterResource(id = R.drawable.fondo),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
-
-        // Capa de oscurecimiento sutil para que el texto resalte
+        Image(painter = painterResource(id = R.drawable.fondo), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)))
 
-        // 2. ICONO DE PERFIL (Disimulado y elegante)
         IconButton(
             onClick = { navController.navigate("perfil") },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(24.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.2f))
+            modifier = Modifier.align(Alignment.TopEnd).padding(24.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.2f))
         ) {
             Icon(Icons.Default.Person, contentDescription = "Perfil", tint = Color.White)
         }
 
-        // 3. CONTENIDO CENTRAL
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Logo
-            Image(
-                painter = painterResource(id = R.drawable.logojasc),
-                contentDescription = "Logo",
-                modifier = Modifier.size(120.dp).padding(bottom = 24.dp)
-            )
+            Image(painter = painterResource(id = R.drawable.tradicional_caballo_negro), contentDescription = "Logo", modifier = Modifier.size(120.dp).padding(bottom = 24.dp))
+            Text(text = "JASC CHESS", fontSize = 32.sp, fontWeight = FontWeight.Black, color = Color.White, modifier = Modifier.padding(bottom = 48.dp))
 
-            Text(
-                text = "JASC CHESS",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Black,
-                color = Color.White,
-                modifier = Modifier.padding(bottom = 48.dp)
-            )
-
-            // Botones con estilo terracota (personaliza el color aquí)
             val btnColor = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5A2B))
+            val accentColor = ButtonDefaults.buttonColors(containerColor = Color(0xFFB45309))
 
+            // JUGAR PARTIDA LIBRE
             Button(
-                onClick = { boardViewModel.resetToLibre(); navController.navigate("juego") },
-                modifier = Modifier.fillMaxWidth(0.6f).height(50.dp),
-                colors = btnColor
-            ) {
-                Text("Jugar Partida Libre", fontSize = 16.sp)
-            }
+                onClick = {
+                    boardViewModel.prepararJuego(8, GameMode.LIBRE, false)
+                    navController.navigate("juego")
+                },
+                modifier = Modifier.fillMaxWidth(0.6f).height(50.dp), colors = btnColor
+            ) { Text("Jugar Partida Libre", fontSize = 16.sp) }
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // PRÁCTICA 8X8 (PUZZLE)
             Button(
-                onClick = { boardViewModel.iniciarNivelDePrueba(); navController.navigate("juego") },
-                modifier = Modifier.fillMaxWidth(0.6f).height(50.dp),
-                colors = btnColor
-            ) {
-                Text("Ir a Prácticas", fontSize = 16.sp)
-            }
+                onClick = {
+                    boardViewModel.prepararJuego(8, GameMode.PUZZLE, true)
+                    boardViewModel.iniciarNivelDePrueba()
+                    navController.navigate("juego")
+                },
+                modifier = Modifier.fillMaxWidth(0.6f).height(50.dp), colors = btnColor
+            ) { Text("Prácticas (8x8)", fontSize = 16.sp) }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // PRÁCTICA 4X4 (PUZZLE)
+            Button(
+                onClick = {
+                    boardViewModel.prepararJuego(4, GameMode.PUZZLE, true)
+                    navController.navigate("juego")
+                },
+                modifier = Modifier.fillMaxWidth(0.6f).height(50.dp), colors = accentColor
+            ) { Text("Prácticas (4x4)", fontSize = 16.sp) }
         }
     }
 }
