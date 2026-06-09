@@ -28,6 +28,11 @@ import com.jasc.jasc_chess.R
 import com.jasc.jasc_chess.model.*
 import com.jasc.jasc_chess.ui.components.TimerComponent
 import com.jasc.jasc_chess.ui.components.ChessPieceView
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.foundation.clickable
+import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.ripple
 @Composable
 fun GameScreen(viewModel: BoardViewModel = viewModel()) {
     val gameState by viewModel.gameState.collectAsState()
@@ -75,7 +80,9 @@ fun GameScreen(viewModel: BoardViewModel = viewModel()) {
                 CementerioRow("IMPERIO (ORO): ", gameState.piezasComidasOro, gameState)
                 CementerioRow("IA (PLATA): ", gameState.piezasComidasPlata, gameState)
 
-                // Tablero
+// ... (Código superior previo)
+
+// Tablero
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 1.dp, vertical = 1.dp)
@@ -93,35 +100,24 @@ fun GameScreen(viewModel: BoardViewModel = viewModel()) {
                             for (i in gameState.boardSize downTo 1) Text(text = i.toString(), color = Color(0xFFE2E8F0), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
 
-                        // Matriz de casillas
+                        // Matriz de casillas - CORREGIDO: Sin doble bucle anidado
                         Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
                             for (row in 0 until gameState.boardSize) {
                                 Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
                                     for (col in 0 until gameState.boardSize) {
                                         val currentPos = Position(row, col)
-// Esto va dentro de GameScreen.kt, en la parte donde se llama a CasillaView
                                         CasillaView(
                                             position = currentPos,
                                             gameState = gameState,
                                             colores = colores,
-                                            modoEdicion = viewModel.modoEdicion,
+                                            modoEdicion = gameState.isEditingMode,
                                             onClick = {
-                                                if (viewModel.modoEdicion) {
+                                                if (gameState.isEditingMode) {
                                                     viewModel.manejarEdicionTablero(currentPos)
                                                 } else {
-                                                    // AQUÍ APLICAS LA LÓGICA DE DESELECCIÓN
-                                                    if (gameState.selectedPosition == currentPos) {
-                                                        // Si ya estaba seleccionada, la deseleccionamos al hacer clic de nuevo
-                                                        viewModel.onCellSelected(null)
-                                                    } else if (gameState.modoJuego == GameMode.PUZZLE) {
-                                                        if (gameState.selectedPosition == null) {
-                                                            viewModel.onCellSelected(currentPos)
-                                                        } else {
-                                                            viewModel.validarJugadaPuzzle(gameState.selectedPosition!!, currentPos)
-                                                        }
-                                                    } else {
-                                                        viewModel.onCellSelected(currentPos)
-                                                    }
+                                                    if (gameState.selectedPosition == currentPos) viewModel.onCellSelected(null)
+                                                    else if (gameState.modoJuego == GameMode.PUZZLE && gameState.selectedPosition != null) viewModel.validarJugadaPuzzle(gameState.selectedPosition!!, currentPos)
+                                                    else viewModel.onCellSelected(currentPos)
                                                 }
                                             }
                                         )
@@ -137,6 +133,8 @@ fun GameScreen(viewModel: BoardViewModel = viewModel()) {
                         }
                     }
                 }
+
+// ... (Resto del código hasta el final)
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -153,27 +151,23 @@ fun GameScreen(viewModel: BoardViewModel = viewModel()) {
 
                     val esTablero4x4 = gameState.boardSize == 4
 
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (gameState.modoJuego == GameMode.PUZZLE) {
-                            OutlinedButton(
-                                onClick = { viewModel.iniciarModoLibre(8) }, // Salir a Libre (8x8)
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
-                            ) { Text("SALIR A LIBRE") }
-                        } else {
-                            OutlinedButton(
-                                onClick = {
-                                    // Si es 4x4, vamos a 8x8. Si es 8x8, vamos a 4x4.
-                                    val nuevoSize = if (esTablero4x4) 8 else 4
-                                    viewModel.iniciarModoLibre(nuevoSize)
-                                },
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = if (esTablero4x4) Color(0xFF10B981) else Color(0xFF38BDF8)
-                                )
-                            ) {
-                                Text(text = if (esTablero4x4) "JUGAR AJEDREZ (8x8)" else "JUGAR 4X4")
-                            }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val esTablero4x4 = gameState.boardSize == 4
+
+                        OutlinedButton(
+                            onClick = {
+                                val nuevoSize = if (esTablero4x4) 8 else 4
+                                viewModel.iniciarModoLibre(nuevoSize)
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = if (esTablero4x4) Color(0xFF10B981) else Color(0xFF38BDF8)
+                            )
+                        ) {
+                            Text(text = if (esTablero4x4) "JUGAR AJEDREZ (8x8)" else "JUGAR 4X4")
                         }
                     }
                 }
@@ -183,7 +177,7 @@ fun GameScreen(viewModel: BoardViewModel = viewModel()) {
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    BotonCircularMedieval({ viewModel.reiniciarPartida() }, "🔄", "REINICIAR", Color(0xFFB45309))
+                    BotonCircularMedieval({ viewModel.reiniciarSegunModo() }, "🔄", "REINICIAR", Color(0xFFB45309))
                     BotonCircularMedieval({ viewModel.cambiarDificultad() }, "🏆", "NIVEL", Color(0xFF6D28D9))
                     BotonCircularMedieval({ viewModel.cambiarEstiloFichas() }, "♟️", "PIEZAS", Color(0xFF1E3A8A))
                     BotonCircularMedieval({ viewModel.deshacerJugada() }, "↩️", "DESHACER", Color(0xFF78350F))
@@ -192,7 +186,7 @@ fun GameScreen(viewModel: BoardViewModel = viewModel()) {
                 }
 
                 // Panel modo edición
-                if (viewModel.modoEdicion) {
+                if (gameState.isEditingMode) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -201,13 +195,40 @@ fun GameScreen(viewModel: BoardViewModel = viewModel()) {
                             .padding(8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Button(onClick = { }, enabled = false, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6D28D9))) { Text("MODO EDICIÓN ACTIVADO", color = Color.White) }
+                        // --- FILA SUPERIOR: TÍTULO Y BOTÓN DE CIERRE ---
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Espaciador para centrar el título
+                            Spacer(modifier = Modifier.width(48.dp))
+
+                            Button(
+                                onClick = { },
+                                enabled = false,
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6D28D9))
+                            ) {
+                                Text("MODO EDICIÓN", color = Color.White)
+                            }
+
+                            // Botón de Cierre (La "X")
+                            IconButton(onClick = { viewModel.cerrarModoEdicion() }) {
+                                Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.White)
+                            }
+                        }
+
+                        // Panel de selección de piezas
                         PanelEdicion(viewModel)
+
+                        // Botón Guardar
                         Button(
                             onClick = { viewModel.finalizarYGuardarNivel() },
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
                         ) { Text("GUARDAR NIVEL Y AVANZAR") }
+
+                        // Botón Generar
                         Button(
                             onClick = {
                                 Log.e("DEBUG_BOTON", "Clic capturado en la UI")
@@ -304,37 +325,35 @@ fun RowScope.CasillaView(
 
     Box(
         modifier = Modifier
-            .weight(1f)
+            .weight(1f) // OBLIGATORIO: Distribuye el espacio correctamente
             .fillMaxHeight()
-            .background(if (isDarkCell) colores.second else colores.first) // Color base limpio
-            .then(
-                if (esJaqueMateAlRey) Modifier.background(Color(0xFFB91C1C).copy(alpha = 0.6f))
-                else Modifier
-            )
-            .clickable(enabled = true, onClick = onClick),
+            .background(if (isDarkCell) colores.second else colores.first)
+            .then(if (esJaqueMateAlRey) Modifier.background(Color(0xFFB91C1C).copy(alpha = 0.6f)) else Modifier)
+            .clickable(
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication = ripple(bounded = true),
+                onClick = onClick
+            ),
         contentAlignment = Alignment.Center
     ) {
-        // 1. INDICADOR DE SELECCIÓN (Borde elegante en lugar de fondo)
+        // Marcador de selección
         if (isSelected) {
-            Box(modifier = Modifier.fillMaxSize().border(4.dp, Color(0xFFE6B400).copy(alpha = 0.7f)))
+            Box(modifier = Modifier.fillMaxSize().border(4.dp, Color(0xFFE6B400).copy(alpha = 0.8f)))
         }
 
-        // 2. INDICADOR DE MOVIMIENTO (Círculo pequeño y sutil)
+        // Marcador de movimiento válido
         if (esMovimientoValido) {
-            Canvas(modifier = Modifier.fillMaxSize().padding(14.dp)) {
-                drawCircle(
-                    color = Color(0xFF88B378).copy(alpha = 0.6f),
-                    radius = size.minDimension / 2.5f
-                )
+            Canvas(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+                drawCircle(color = Color(0xFF88B378).copy(alpha = 0.7f), radius = size.minDimension / 3f)
             }
         }
 
-        // 3. INDICADOR DE PISTA
+        // Pista IA
         if (gameState.casillaPista == position) {
-            Box(modifier = Modifier.size(10.dp).background(Color.Magenta, CircleShape))
+            Box(modifier = Modifier.size(12.dp).background(Color.Magenta, CircleShape))
         }
 
-        // DIBUJO DE LA PIEZA
+        // Renderizado de pieza
         piece?.let { p ->
             ChessPieceView(
                 piece = p,
@@ -479,27 +498,23 @@ fun BotonCircularMedieval(
 }
 @Composable
 fun PanelEdicion(viewModel: BoardViewModel) {
-    // Aseguramos que estén todas las piezas
-    val tipos = listOf(
-        PieceType.PEON, PieceType.TORRE, PieceType.CABALLO,
-        PieceType.ALFIL, PieceType.REINA, PieceType.REY
-    )
+    val tipos = listOf(PieceType.PEON, PieceType.TORRE, PieceType.CABALLO, PieceType.ALFIL, PieceType.REINA, PieceType.REY)
     val colores = listOf(PieceColor.ORO, PieceColor.PLATA)
 
     Column(modifier = Modifier.padding(8.dp).background(Color(0xFF1E293B), RoundedCornerShape(8.dp)).padding(8.dp)) {
-        Text("Selecciona Pieza y Color:", color = Color.White, fontWeight = FontWeight.Bold)
+        Text("Selecciona una pieza para jugar:", color = Color.White, fontWeight = FontWeight.Bold)
 
-        // Usamos una estructura más clara para que no falte ninguna pieza
         tipos.forEach { tipo ->
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(vertical = 2.dp)) {
-                Text(tipo.name.take(2), color = Color.White, modifier = Modifier.width(30.dp))
                 colores.forEach { color ->
+                    val esSeleccionada = viewModel.piezaSeleccionadaParaColocar == (tipo to color)
                     Button(
                         onClick = { viewModel.piezaSeleccionadaParaColocar = tipo to color },
-                        colors = ButtonDefaults.buttonColors(containerColor = if (color == PieceColor.ORO) Color(0xFFF59E0B) else Color(0xFF94A3B8))
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (esSeleccionada) Color.Green else (if (color == PieceColor.ORO) Color(0xFFF59E0B) else Color(0xFF94A3B8))
+                        )
                     ) {
-                        // Aquí se mostrarán correctamente PO, PP, TO, TP, CO, CP, AO, AP, RO, RP, REO, REP
-                        Text("${tipo.name.take(1)}${color.name.take(1)}", fontSize = 10.sp)
+                        Text("${tipo.name.take(1)}${color.name.take(1)}")
                     }
                 }
             }

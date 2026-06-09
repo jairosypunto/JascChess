@@ -171,6 +171,17 @@ object NivelRepository {
             ChessPiece("n1_q_oro", PieceType.REINA, PieceColor.ORO, Position(2, 0)),
             ChessPiece("n2_t_oro", PieceType.TORRE, PieceColor.ORO, Position(5, 4))
         ), PieceColor.ORO),
+        16 to NivelConfig(16, 5, listOf(
+            // Plata (Fila 0)
+            ChessPiece("p_0_1_1780980688004", PieceType.REY, PieceColor.PLATA, Position(0, 1)),
+            ChessPiece("p_0_2_1780980691412", PieceType.REINA, PieceColor.PLATA, Position(0, 2)),
+            ChessPiece("p_1_0_1780980694431", PieceType.PEON, PieceColor.PLATA, Position(1, 0)),
+            ChessPiece("p_1_1_1780980694685", PieceType.PEON, PieceColor.PLATA, Position(1, 1)),
+            ChessPiece("p_1_2_1780980694917", PieceType.PEON, PieceColor.PLATA, Position(1, 2)),
+            ChessPiece("p_3_0_1780980702060", PieceType.REINA, PieceColor.ORO, Position(3, 0)),
+            ChessPiece("p_3_3_1780980708475", PieceType.TORRE, PieceColor.ORO, Position(3, 3)),
+            ChessPiece("p_3_4_1780980711305", PieceType.ALFIL, PieceColor.ORO, Position(3, 4)),
+        ), PieceColor.ORO),
 
     )
 

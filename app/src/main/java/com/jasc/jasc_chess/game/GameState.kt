@@ -3,6 +3,8 @@ package com.jasc.jasc_chess.game
 import com.jasc.jasc_chess.model.*
 
 data class GameState(
+    // --- NUEVO ESTADO DE EDICIÓN ---
+    val isEditingMode: Boolean = false, // <--- AÑADE ESTA LÍNEA AQUÍ
     // --- ESTADO DEL PUZZLE Y MODO ---
     val lastUpdate: Long = 0L, // Añade esta línea
     val currentPuzzle: ChessPuzzle? = null,
