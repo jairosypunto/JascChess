@@ -1,7 +1,7 @@
 package com.jasc.jasc_chess.data.engine
 
 import com.jasc.jasc_chess.model.*
-import com.jasc.jasc_chess.game.GameState // Importante: Asegura este import
+import kotlin.random.Random
 
 object AIEngine {
 
@@ -18,35 +18,44 @@ object AIEngine {
         val depth = when(nivel) {
             NivelDificultad.PRINCIPIANTE -> 1
             NivelDificultad.INTERMEDIO -> 2
-            NivelDificultad.INFIERNO -> 3
+            NivelDificultad.AVANZADO -> 4
         }
 
         val aliadas = piezas.filter { it.color == PieceColor.PLATA }
+        val movimientosPosibles = aliadas.flatMap { p ->
+            MoveValidator.obtenerMovimientosValidos(p, piezas, size).map { p to it }
+        }
+
+        if (movimientosPosibles.isEmpty()) return null
+
         var mejorMovimiento: Pair<ChessPiece, Position>? = null
         var maxEval = Int.MIN_VALUE
 
-        val movimientos = aliadas.flatMap { p ->
-            // Esta llamada ahora usa la sobrecarga en MoveValidator y funcionará perfectamente
-            MoveValidator.obtenerMovimientosValidos(p, piezas, size).map { p to it }
-        }.sortedByDescending { (_, dest) ->
-            if (piezas.any { it.position == dest && it.color == PieceColor.ORO }) 1000 else 0
-        }
+        // Lista para guardar movimientos con el mismo valor máximo y elegir al azar
+        val mejoresMovimientos = mutableListOf<Pair<ChessPiece, Position>>()
 
-        for ((p, d) in movimientos) {
+        for ((p, d) in movimientosPosibles) {
             val simulacion = simularMovimiento(p, d, piezas)
             val valor = minimax(simulacion, depth - 1, false, Int.MIN_VALUE, Int.MAX_VALUE, size)
 
             if (valor > maxEval) {
                 maxEval = valor
-                mejorMovimiento = p to d
+                mejoresMovimientos.clear()
+                mejoresMovimientos.add(p to d)
+            } else if (valor == maxEval) {
+                mejoresMovimientos.add(p to d)
             }
         }
-        return mejorMovimiento
+
+        // Retornamos uno al azar entre los mejores para que no sea repetitiva
+        return mejoresMovimientos.randomOrNull()
     }
 
     private fun minimax(tablero: List<ChessPiece>, depth: Int, isMax: Boolean, alpha: Int, beta: Int, size: Int): Int {
-        if (depth == 0) return evaluarTablero(tablero, size)
-        var (a, b) = alpha to beta
+        if (depth == 0 || esFinPartida(tablero)) return evaluarTablero(tablero, size)
+
+        var a = alpha
+        var b = beta
 
         if (isMax) {
             var maxE = Int.MIN_VALUE
@@ -75,16 +84,30 @@ object AIEngine {
         var score = 0
         for (p in piezas) {
             val v = obtenerValorPieza(p.type)
-            val material = if (p.color == PieceColor.PLATA) v else -v
-            val centroMin = size / 2 - 1
-            val centroMax = size / 2
-            val central = if (p.position.row in centroMin..centroMax && p.position.col in centroMin..centroMax) 20 else 0
-            val desarrollo = if (p.position.row == 0 && (p.type == PieceType.CABALLO || p.type == PieceType.ALFIL)) -15 else 0
-            score += material + (if (p.color == PieceColor.PLATA) (central + desarrollo) else -(central + desarrollo))
+            val esPlata = p.color == PieceColor.PLATA
+            val factor = if (esPlata) 1 else -1
+
+            // 1. Material
+            score += (v * factor)
+
+            // 2. Penalización agresiva por estar bajo amenaza (evita suicidarse)
+            if (MoveValidator.esCasillaAmenazadaPorGeometria(p.position, if (esPlata) PieceColor.ORO else PieceColor.PLATA, piezas, size)) {
+                score -= (v / 2) * factor
+            }
         }
-        if (estaElReyEnJaqueEnSimulacion(PieceColor.PLATA, piezas, size)) score -= 500
-        if (estaElReyEnJaqueEnSimulacion(PieceColor.ORO, piezas, size)) score += 500
+
+        // 3. Seguridad del Rey
+        val reyPlata = piezas.find { it.type == PieceType.REY && it.color == PieceColor.PLATA }
+        val reyOro = piezas.find { it.type == PieceType.REY && it.color == PieceColor.ORO }
+
+        if (estaElReyEnJaqueEnSimulacion(PieceColor.PLATA, piezas, size)) score -= 1000
+        if (estaElReyEnJaqueEnSimulacion(PieceColor.ORO, piezas, size)) score += 1000
+
         return score
+    }
+
+    private fun esFinPartida(piezas: List<ChessPiece>): Boolean {
+        return piezas.none { it.type == PieceType.REY }
     }
 
     fun simularMovimiento(p: ChessPiece, d: Position, piezas: List<ChessPiece>): List<ChessPiece> {

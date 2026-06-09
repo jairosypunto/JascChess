@@ -56,7 +56,7 @@ fun ProfileScreen(navController: NavController) {
             ) {
                 // Imagen de perfil usando logojasc
                 Image(
-                    painter = painterResource(id = R.drawable.perfil),
+                    painter = painterResource(id = R.drawable.perfil2),
                     contentDescription = "Foto de perfil",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop

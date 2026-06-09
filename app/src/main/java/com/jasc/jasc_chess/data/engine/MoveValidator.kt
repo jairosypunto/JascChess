@@ -1,6 +1,8 @@
 package com.jasc.jasc_chess.data.engine
 
 import com.jasc.jasc_chess.model.*
+import com.jasc.jasc_chess.model.ChessPiece
+import kotlin.Int
 import kotlin.math.abs
 
 object MoveValidator {
@@ -73,30 +75,41 @@ object MoveValidator {
     private fun obtenerMovimientosPeon(p: ChessPiece, piezas: List<ChessPiece>, size: Int): List<Position> {
         val moves = mutableListOf<Position>()
         val dir = if (p.color == PieceColor.ORO) -1 else 1
-        val f1 = Position(p.position.row + dir, p.position.col)
+        val filaSiguiente = p.position.row + dir
+
+        // Movimiento simple hacia adelante
+        val f1 = Position(filaSiguiente, p.position.col)
         if (esPosicionValida(f1.row, f1.col, size) && piezas.none { it.position == f1 }) {
             moves.add(f1)
-            if (size == 8) {
-                val base = if (p.color == PieceColor.ORO) 6 else 1
-                val f2 = Position(p.position.row + (dir * 2), p.position.col)
-                if (p.position.row == base && piezas.none { it.position == f2 }) moves.add(f2)
+
+            // Salto doble (dinámico según la fila de inicio)
+            val filaInicio = if (p.color == PieceColor.ORO) size - 2 else 1
+            val f2 = Position(p.position.row + (dir * 2), p.position.col)
+            if (p.position.row == filaInicio && piezas.none { it.position == f2 }) {
+                moves.add(f2)
             }
         }
+
+        // Captura diagonal
         listOf(-1, 1).forEach { colOffset ->
-            val diagonal = Position(p.position.row + dir, p.position.col + colOffset)
-            if (piezas.any { it.position == diagonal && it.color != p.color }) moves.add(diagonal)
+            val diagonal = Position(filaSiguiente, p.position.col + colOffset)
+            if (piezas.any { it.position == diagonal && it.color != p.color }) {
+                moves.add(diagonal)
+            }
         }
         return moves
     }
 
     private fun obtenerMovimientosTorre(p: ChessPiece, ps: List<ChessPiece>, s: Int): List<Position> {
         val moves = mutableListOf<Position>()
+        val piezasMap = ps.associateBy { it.position } // Optimización O(1)
         val dirs = listOf(0 to 1, 0 to -1, 1 to 0, -1 to 0)
+
         for ((dr, dc) in dirs) {
             var r = p.position.row + dr; var c = p.position.col + dc
             while (esPosicionValida(r, c, s)) {
                 val dest = Position(r, c)
-                val target = ps.find { it.position == dest }
+                val target = piezasMap[dest]
                 if (target == null) moves.add(dest)
                 else { if (target.color != p.color) moves.add(dest); break }
                 r += dr; c += dc
@@ -107,12 +120,14 @@ object MoveValidator {
 
     private fun obtenerMovimientosAlfil(p: ChessPiece, ps: List<ChessPiece>, s: Int): List<Position> {
         val moves = mutableListOf<Position>()
+        val piezasMap = ps.associateBy { it.position } // Optimización O(1)
         val dirs = listOf(1 to 1, 1 to -1, -1 to 1, -1 to -1)
+
         for ((dr, dc) in dirs) {
             var r = p.position.row + dr; var c = p.position.col + dc
             while (esPosicionValida(r, c, s)) {
                 val pos = Position(r, c)
-                val target = ps.find { it.position == pos }
+                val target = piezasMap[pos]
                 if (target == null) moves.add(pos)
                 else { if (target.color != p.color) moves.add(pos); break }
                 r += dr; c += dc
@@ -123,11 +138,13 @@ object MoveValidator {
 
     private fun obtenerMovimientosCaballo(p: ChessPiece, ps: List<ChessPiece>, s: Int): List<Position> {
         val moves = mutableListOf<Position>()
+        val piezasMap = ps.associateBy { it.position } // Optimización O(1)
         val saltos = listOf(-2 to 1, -2 to -1, 2 to 1, 2 to -1, -1 to 2, -1 to -2, 1 to 2, 1 to -2)
+
         for ((dr, dc) in saltos) {
             val r = p.position.row + dr; val c = p.position.col + dc
             if (esPosicionValida(r, c, s)) {
-                val target = ps.find { it.position == Position(r, c) }
+                val target = piezasMap[Position(r, c)]
                 if (target == null || target.color != p.color) moves.add(Position(r, c))
             }
         }
@@ -136,29 +153,45 @@ object MoveValidator {
 
     private fun obtenerMovimientosRey(rey: ChessPiece, piezas: List<ChessPiece>, size: Int): List<Position> {
         val moves = mutableListOf<Position>()
-        for (dr in -1..1) for (dc in -1..1) {
-            if (dr == 0 && dc == 0) continue
-            val r = rey.position.row + dr; val c = rey.position.col + dc
-            if (esPosicionValida(r, c, size)) {
-                val pos = Position(r, c)
-                val target = piezas.find { it.position == pos }
-                if (target == null || target.color != rey.color) moves.add(pos)
+        val piezasMap = piezas.associateBy { it.position } // Optimización O(1)
+
+        // 1. Movimientos normales
+        for (dr in -1..1) {
+            for (dc in -1..1) {
+                if (dr == 0 && dc == 0) continue
+                val r = rey.position.row + dr; val c = rey.position.col + dc
+                if (esPosicionValida(r, c, size)) {
+                    val pos = Position(r, c)
+                    val target = piezasMap[pos]
+                    if (target == null || target.color != rey.color) moves.add(pos)
+                }
             }
         }
 
+        // 2. Enroque dinámico
         if (!rey.hasMoved) {
             val opColor = if (rey.color == PieceColor.ORO) PieceColor.PLATA else PieceColor.ORO
             if (!esCasillaAmenazadaPorGeometria(rey.position, opColor, piezas, size)) {
+
+                // Enroque Corto
                 val torreCorta = piezas.find { it.type == PieceType.TORRE && it.color == rey.color && it.position.col == size - 1 && it.position.row == rey.position.row }
-                if (torreCorta != null && !torreCorta.hasMoved && estaCaminoLibre(rey.position.row, listOf(5, 6), piezas)) {
-                    if (!esCasillaAmenazadaPorGeometria(Position(rey.position.row, 5), opColor, piezas, size) && !esCasillaAmenazadaPorGeometria(Position(rey.position.row, 6), opColor, piezas, size)) {
-                        moves.add(Position(rey.position.row, 6))
+                if (torreCorta != null && !torreCorta.hasMoved) {
+                    val caminoCorto = (rey.position.col + 1 until size - 1).toList()
+                    if (estaCaminoLibre(rey.position.row, caminoCorto, piezas)) {
+                        if (caminoCorto.all { !esCasillaAmenazadaPorGeometria(Position(rey.position.row, it), opColor, piezas, size) }) {
+                            moves.add(Position(rey.position.row, size - 2))
+                        }
                     }
                 }
+
+                // Enroque Largo
                 val torreLarga = piezas.find { it.type == PieceType.TORRE && it.color == rey.color && it.position.col == 0 && it.position.row == rey.position.row }
-                if (torreLarga != null && !torreLarga.hasMoved && estaCaminoLibre(rey.position.row, listOf(1, 2, 3), piezas)) {
-                    if (!esCasillaAmenazadaPorGeometria(Position(rey.position.row, 3), opColor, piezas, size) && !esCasillaAmenazadaPorGeometria(Position(rey.position.row, 2), opColor, piezas, size)) {
-                        moves.add(Position(rey.position.row, 2))
+                if (torreLarga != null && !torreLarga.hasMoved) {
+                    val caminoLargo = (1 until rey.position.col).toList()
+                    if (estaCaminoLibre(rey.position.row, caminoLargo, piezas)) {
+                        if (caminoLargo.all { !esCasillaAmenazadaPorGeometria(Position(rey.position.row, it), opColor, piezas, size) }) {
+                            moves.add(Position(rey.position.row, 2))
+                        }
                     }
                 }
             }

@@ -46,7 +46,7 @@ fun MainMenuScreen(
 
                 .align(Alignment.TopEnd)
 
-                .padding(24.dp)
+                .padding(32.dp)
 
                 .size(50.dp)
 
@@ -58,7 +58,7 @@ fun MainMenuScreen(
 
             Image(
 
-                painter = painterResource(id = R.drawable.perfil), // El mismo logo
+                painter = painterResource(id = R.drawable.perfil2), // El mismo logo
 
                 contentDescription = "Ir a Perfil",
 
@@ -86,7 +86,7 @@ fun MainMenuScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Image(painter = painterResource(id = R.drawable.tradicional_caballo_negro), contentDescription = "Logo", modifier = Modifier.size(100.dp).padding(bottom = 24.dp))
+            Image(painter = painterResource(id = R.drawable.logoprincipal), contentDescription = "Logo", modifier = Modifier.size(100.dp).padding(bottom = 24.dp))
             Text(text = "JASC CHESS", fontSize = 32.sp, fontWeight = FontWeight.Black, color = Color.White, modifier = Modifier.padding(bottom = 48.dp))
 
             val btnColor = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5A2B))
@@ -111,6 +111,15 @@ fun MainMenuScreen(
                 },
                 modifier = Modifier.fillMaxWidth(0.6f).height(50.dp), colors = accentColor
             ) { Text("Prácticas (4x4)", fontSize = 16.sp) }
+
+            // 4. SELECCIONAR NIVEL (Nuevo botón)
+            Button(
+                onClick = { navController.navigate("selector_niveles") },
+                modifier = Modifier.fillMaxWidth(0.6f).height(50.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A6741)) // Color verde oscuro para diferenciar
+            ) {
+                Text("Seleccionar Nivel", fontSize = 16.sp)
+            }
         }
     }
 }

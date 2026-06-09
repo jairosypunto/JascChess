@@ -17,7 +17,7 @@ import com.jasc.jasc_chess.game.ProfileScreen
 import com.jasc.jasc_chess.history.HistoryScreen // <-- ESTE IMPORT FALTABA
 import com.jasc.jasc_chess.menu.MainMenuScreen
 import com.jasc.jasc_chess.ui.theme.Jasc_chessTheme
-
+import com.jasc.jasc_chess.menu.SelectorNivelesScreen
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,6 +32,10 @@ class MainActivity : ComponentActivity() {
                         composable("juego") { GameScreen(sharedViewModel) }
                         composable("perfil") { ProfileScreen(navController) }
                         composable("history_screen") { HistoryScreen(navController) }
+                        composable("selector_niveles") {
+                            // Cambiamos boardViewModel por sharedViewModel
+                            SelectorNivelesScreen(navController, sharedViewModel)
+                        }
                     }
                 }
             }

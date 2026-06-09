@@ -18,6 +18,8 @@ import com.jasc.jasc_chess.model.ChessPuzzle
 import com.jasc.jasc_chess.model.Move // Basado en tu archivo Move.kt
 import android.util.Log
 import com.jasc.jasc_chess.data.local.NivelRepository
+// En BoardViewModel.kt, añade esto en la sección de imports:
+import com.jasc.jasc_chess.data.local.NivelConfig
 class BoardViewModel : ViewModel() {
     private val _gameState = MutableStateFlow(GameState())
     val gameState: StateFlow<GameState> = _gameState.asStateFlow()
@@ -27,77 +29,147 @@ class BoardViewModel : ViewModel() {
         configurarPartida(8, GameMode.LIBRE)
         iniciarTemporizadorReloj()
     }
+    // 1. Esta función es la que llamas desde el SelectorNivelesScreen
+    fun cargarPartida(nivelId: Int) {
+        val config = NivelRepository.totalNiveles[nivelId]
 
-    private fun setupInitialBoard(): List<ChessPiece> {
-        val initialPieces = mutableListOf<ChessPiece>()
-        initialPieces.add(ChessPiece("t_plata_1", PieceType.TORRE, PieceColor.PLATA, Position(0, 0)))
-        initialPieces.add(ChessPiece("c_plata_1", PieceType.CABALLO, PieceColor.PLATA, Position(0, 1)))
-        initialPieces.add(ChessPiece("a_plata_1", PieceType.ALFIL, PieceColor.PLATA, Position(0, 2)))
-        initialPieces.add(ChessPiece("q_plata", PieceType.REINA, PieceColor.PLATA, Position(0, 3)))
-        initialPieces.add(ChessPiece("k_plata", PieceType.REY, PieceColor.PLATA, Position(0, 4)))
-        initialPieces.add(ChessPiece("a_plata_2", PieceType.ALFIL, PieceColor.PLATA, Position(0, 5)))
-        initialPieces.add(ChessPiece("c_plata_2", PieceType.CABALLO, PieceColor.PLATA, Position(0, 6)))
-        initialPieces.add(ChessPiece("t_plata_2", PieceType.TORRE, PieceColor.PLATA, Position(0, 7)))
-        for (i in 0..7) { initialPieces.add(ChessPiece("p_plata_$i", PieceType.PEON, PieceColor.PLATA, Position(1, i))) }
-        for (i in 0..7) { initialPieces.add(ChessPiece("p_oro_$i", PieceType.PEON, PieceColor.ORO, Position(6, i))) }
-        initialPieces.add(ChessPiece("t_oro_1", PieceType.TORRE, PieceColor.ORO, Position(7, 0)))
-        initialPieces.add(ChessPiece("c_oro_1", PieceType.CABALLO, PieceColor.ORO, Position(7, 1)))
-        initialPieces.add(ChessPiece("a_oro_1", PieceType.ALFIL, PieceColor.ORO, Position(7, 2)))
-        initialPieces.add(ChessPiece("q_oro", PieceType.REINA, PieceColor.ORO, Position(7, 3)))
-        initialPieces.add(ChessPiece("k_oro", PieceType.REY, PieceColor.ORO, Position(7, 4)))
-        initialPieces.add(ChessPiece("a_oro_2", PieceType.ALFIL, PieceColor.ORO, Position(7, 5)))
-        initialPieces.add(ChessPiece("c_oro_2", PieceType.CABALLO, PieceColor.ORO, Position(7, 6)))
-        initialPieces.add(ChessPiece("t_oro_2", PieceType.TORRE, PieceColor.ORO, Position(7, 7)))
-        return initialPieces
+        if (config != null) {
+            // IMPORTANTE: Pasamos config.size para que el motor sepa que el tablero creció
+            configurarPartida(config.size, GameMode.PUZZLE)
+
+            _gameState.update { it.copy(
+                pieces = config.piezas,
+                nivelActualInt = nivelId,
+                currentTurn = config.turnoInicial,
+                boardSize = config.size // <--- ESTO ES LO QUE HACE QUE EL 5x5 Y 6x6 SE DIBUJEN BIEN
+            )}
+        }
+    }
+fun configurarPartida(nuevoSize: Int, nuevoModo: GameMode, puzzle: ChessPuzzle? = null) {
+    Log.d("JASC_DEBUG", "Iniciando configuración: tamaño=$nuevoSize, modo=$nuevoModo")
+
+    val piezasNuevas = try {
+        puzzle?.let { FENParser.parse(it.fen, nuevoSize) }
+            ?: generarPiezasParaModo(nuevoSize)
+    } catch (e: Exception) {
+        Log.e("JASC_ERROR", "Error crítico en FEN: ${puzzle?.fen}", e)
+        generarPiezasParaModo(nuevoSize)
     }
 
-    fun configurarPartida(nuevoSize: Int, nuevoModo: GameMode, puzzle: ChessPuzzle? = null) {
-        Log.d("JASC_DEBUG", "Iniciando configuración: tamaño=$nuevoSize, modo=$nuevoModo")
+    _gameState.update { currentState ->
+        currentState.copy(
+            boardSize = nuevoSize,
+            modoJuego = nuevoModo,
+            pieces = piezasNuevas,
+            currentPuzzle = puzzle,
+            puzzleStepIndex = 0,
+            currentTurn = PieceColor.ORO,
+            partidaIniciada = true,
+            selectedPosition = null,
 
-        val piezasNuevas = try {
-            puzzle?.let { FENParser.parse(it.fen, nuevoSize) }
-                ?: generarPiezasParaModo(nuevoSize)
-        } catch (e: Exception) {
-            Log.e("JASC_ERROR", "Error crítico en FEN: ${puzzle?.fen}", e)
-            generarPiezasParaModo(nuevoSize)
+            // FUERZA LA LISTA A SER List<Move> explícitamente
+            validMoves = if (nuevoModo == GameMode.PUZZLE && puzzle != null) {
+                puzzle.requiredMoves.toList()
+            } else {
+                emptyList<Move>()
+            },
+
+            esJaqueMate = false,
+            esTablas = false,
+            esJaque = false,
+            piezasComidasOro = emptyList(),
+            piezasComidasPlata = emptyList(),
+            historialTableros = listOf(piezasNuevas),
+            lastUpdate = System.currentTimeMillis()
+        )
+    }
+}
+    fun esCoronacionValida(pieza: ChessPiece, destino: Position, size: Int): Boolean {
+        if (pieza.type != PieceType.PEON) return false
+        val filaMeta = if (pieza.color == PieceColor.ORO) 0 else size - 1
+        return destino.row == filaMeta
+    }
+
+    fun generarCodigoDeNivel() {
+        val piezas = _gameState.value.pieces
+
+        android.util.Log.e("DEBUG_TOTAL", "--- INICIO CÓDIGO ---")
+        android.util.Log.e("DEBUG_TOTAL", "NivelConfig(piezas = listOf(")
+
+        piezas.forEach { p ->
+            val linea = "    ChessPiece(\"${p.id}\", PieceType.${p.type}, PieceColor.${p.color}, Position(${p.position.row}, ${p.position.col})),"
+            android.util.Log.e("DEBUG_TOTAL", linea)
         }
 
+        android.util.Log.e("DEBUG_TOTAL", "), turnoInicial = PieceColor.ORO)")
+        android.util.Log.e("DEBUG_TOTAL", "--- FIN CÓDIGO ---")
+    }
+
+    var modoEdicion by mutableStateOf(false)
+
+    fun activarModoEdicion() {
+        vaciarTablero() // Llamamos a la función de limpieza
+        modoEdicion = true // Activamos la visibilidad del panel y botones
+    }
+    var piezaSeleccionadaParaColocar by mutableStateOf<Pair<PieceType, PieceColor>?>(null)
+
+    fun manejarEdicionTablero(pos: Position) {
+        // 1. Validamos que tengamos una pieza seleccionada antes de actuar
+        val seleccion = piezaSeleccionadaParaColocar ?: return
+
         _gameState.update { currentState ->
-            currentState.copy(
-                boardSize = nuevoSize,
-                modoJuego = nuevoModo,
-                pieces = piezasNuevas,
-                currentPuzzle = puzzle,
-                puzzleStepIndex = 0,
-                currentTurn = PieceColor.ORO,
-                partidaIniciada = true,
+            val piezasActuales = currentState.pieces.toMutableList()
+            val piezaExistente = piezasActuales.find { it.position == pos }
+
+            val nuevasPiezas = if (piezaExistente != null) {
+                // Si la pieza que está ahí es del mismo tipo y color, podrías querer borrarla
+                // Si quieres rotar, aquí cambiarías la lógica. Por ahora, borramos.
+                piezasActuales.apply { remove(piezaExistente) }
+            } else {
+                // Si la casilla está vacía, añadimos la nueva con el color seleccionado
+                piezasActuales.add(
+                    ChessPiece(
+                        id = "p_${pos.row}_${pos.col}_${System.currentTimeMillis()}", // ID único temporal
+                        type = seleccion.first,
+                        color = seleccion.second,
+                        position = pos
+                    )
+                )
+                piezasActuales
+            }
+
+            // Retornamos el estado copiado
+            currentState.copy(pieces = nuevasPiezas.toList())
+        }
+    }
+
+    fun vaciarTablero() {
+        _gameState.update {
+            it.copy(
+                pieces = emptyList(), // Tablero vacío
                 selectedPosition = null,
-
-                // FUERZA LA LISTA A SER List<Move> explícitamente
-                validMoves = if (nuevoModo == GameMode.PUZZLE && puzzle != null) {
-                    puzzle.requiredMoves.toList()
-                } else {
-                    emptyList<Move>()
-                },
-
+                validMoves = emptyList(),
                 esJaqueMate = false,
-                esTablas = false,
-                esJaque = false,
-                piezasComidasOro = emptyList(),
-                piezasComidasPlata = emptyList(),
-                historialTableros = listOf(piezasNuevas),
-                lastUpdate = System.currentTimeMillis()
+                esTablas = false
             )
         }
     }
+
+
     fun reiniciarPartida() {
         val nivelActual = _gameState.value.nivelActualInt
         Log.d("DEBUG_NIVEL", "Reinciando nivel: $nivelActual")
         cambiarNivel(nivelActual)
     }
 
-    fun onCellSelected(pos: Position) {
+    fun onCellSelected(pos: Position?) { // Cambiado a Position?
         val state = _gameState.value
+
+        // Si pasamos null, deseleccionamos inmediatamente
+        if (pos == null) {
+            _gameState.update { it.copy(selectedPosition = null, validMoves = emptyList()) }
+            return
+        }
 
         // 1. Verificación de límites estricta
         if (!MoveValidator.esPosicionValida(pos.row, pos.col, state.boardSize)) {
@@ -105,11 +177,10 @@ class BoardViewModel : ViewModel() {
             return
         }
 
-        // 2. Delegación a funciones específicas (así el IDE reconoce que se usan)
+        // 2. Delegación
         when (state.modoJuego) {
             GameMode.PUZZLE -> manejarSeleccionPuzzle(pos)
             GameMode.LIBRE -> ejecutarMovimientoLibre(pos)
-            // El 'else' es obligatorio si el compilador cree que pueden existir más estados
             else -> Log.w("JASC_DEBUG", "Modo de juego no soportado: ${state.modoJuego}")
         }
     }
@@ -117,12 +188,47 @@ class BoardViewModel : ViewModel() {
     private fun manejarSeleccionPuzzle(pos: Position) {
         val state = _gameState.value
         val origen = state.selectedPosition
+        val piezaTocada = state.pieces.find { it.position == pos }
+        Log.d("DEBUG_SELECT", "Tocaste: $pos | Origen actual: $origen")
+        // 1. SI YA HABÍA UNA SELECCIÓN (ESTE ES EL PUNTO CLAVE)
+        if (origen != null) {
+            // A) Si toco la misma pieza: DESELECCIONAR
+            if (origen == pos) {
+                Log.d("DEBUG_SELECT", "¡Coincidencia detectada! Limpiando...")
+                _gameState.update { it.copy(selectedPosition = null, validMoves = emptyList()) }
+                return
+            }
 
-        if (origen == null) {
-            val pieza = state.pieces.find { it.position == pos && it.color == state.currentTurn }
-            if (pieza != null) _gameState.update { it.copy(selectedPosition = pos) }
+            // B) Si toco OTRA pieza mía: CAMBIAR SELECCIÓN
+            if (piezaTocada != null && piezaTocada.color == state.currentTurn) {
+                val nuevasValidas = MoveValidator.obtenerMovimientosValidos(piezaTocada, state.pieces, state.boardSize)
+                _gameState.update {
+                    it.copy(selectedPosition = pos, validMoves = nuevasValidas.map { dest -> Move(from = pos, to = dest) })
+                }
+                return
+            }
+
+            // C) Si toco una casilla destino válida: MOVER
+            val esMovimientoValido = state.validMoves.any { it.to == pos }
+            if (esMovimientoValido) {
+                validarJugadaPuzzle(origen, pos)
+                return
+            }
+        }
+
+        // 2. SI NO HABÍA NADA SELECCIONADO (O toqué una pieza enemiga/vacía)
+        // Intentamos seleccionar una pieza propia
+        if (piezaTocada != null && piezaTocada.color == state.currentTurn) {
+            val posicionesValidas = MoveValidator.obtenerMovimientosValidos(piezaTocada, state.pieces, state.boardSize)
+            _gameState.update {
+                it.copy(
+                    selectedPosition = pos,
+                    validMoves = posicionesValidas.map { dest -> Move(from = pos, to = dest) }
+                )
+            }
         } else {
-            validarJugadaPuzzle(origen, pos)
+            // Si toqué una casilla vacía sin tener nada seleccionado, limpiamos todo
+            _gameState.update { it.copy(selectedPosition = null, validMoves = emptyList()) }
         }
     }
 
@@ -172,48 +278,61 @@ class BoardViewModel : ViewModel() {
 
     fun validarJugadaPuzzle(origen: Position, destino: Position) {
         val state = _gameState.value
-        // 1. Calculamos las piezas nuevas
+        val movimiento = state.validMoves.find { it.to == destino } ?: return
+
         val piezasDespues = realizarDesplazamiento(state.pieces, origen, destino)
         val nuevoStep = state.puzzleStepIndex + 1
 
-        // 2. Evaluamos el estado basado en ese movimiento
         evaluarEstadoFinal(piezasDespues, PieceColor.PLATA)
-        val esMate = _gameState.value.esJaqueMate
+        val estadoPostMovimiento = _gameState.value
 
-        if (esMate) {
+        if (estadoPostMovimiento.esJaqueMate) {
             subirDeNivelAutomatico()
-        } else if (nuevoStep >= 2) {
-            // --- AQUÍ ESTÁ EL BLINDAJE ---
-            // 1. Bloqueamos primero
-            _gameState.update { it.copy(pieces = piezasDespues, esJuegoBloqueado = true) }
+        } else if (nuevoStep >= 2) { // Cambiado a 2 para forzar el límite que mencionaste
+            // REINICIO DE NIVEL
+            val nivelActual = state.nivelActualInt
 
-            // 2. Reiniciamos capturando el nivel actual EXACTO antes del delay
-            val nivelQueDebeMantenerse = state.nivelActualInt
+            // Limpiamos todo antes de recargar
+// ... dentro de validarJugadaPuzzle, en el bloque del límite (nuevoStep >= 2)
+            _gameState.update { it.copy(esJuegoBloqueado = true, selectedPosition = null, validMoves = emptyList()) }
 
             viewModelScope.launch {
-                delay(1000)
-                Log.d("JASC_DEBUG", "Forzando reinicio del nivel: $nivelQueDebeMantenerse")
-                // Llamamos a cambiarNivel con el nivel capturado, no con una lectura asíncrona
-                cambiarNivel(nivelQueDebeMantenerse)
+                delay(800)
+                // Usamos el ID del nivel para recargar
+                cambiarNivel(state.nivelActualInt)
             }
         } else {
-            _gameState.update { it.copy(pieces = piezasDespues, puzzleStepIndex = nuevoStep, casillaPista = null) }
-            state.currentPuzzle?.let { ejecutarRespuestaIA(it) }
+            // Continuar el puzzle
+            _gameState.update {
+                it.copy(
+                    pieces = piezasDespues,
+                    puzzleStepIndex = nuevoStep,
+                    selectedPosition = null,
+                    validMoves = emptyList()
+                )
+            }
+
+            viewModelScope.launch {
+                delay(500)
+                if (state.currentPuzzle != null) ejecutarRespuestaIA(state.currentPuzzle)
+                else ejecutarTurnoIA()
+            }
         }
     }
 
     fun reiniciarPartidaLibre() {
-        val size = _gameState.value.boardSize
-        // Genera las piezas estándar (8x8)
+        val size = 8 // Forzamos siempre 8x8 para el modo libre
         val piezasNuevas = generarPiezasParaModo(size)
 
         _gameState.update {
             it.copy(
+                boardSize = size, // <--- Crucial: fuerza el tamaño 8x8
                 pieces = piezasNuevas,
                 historialTableros = listOf(piezasNuevas),
                 esJaqueMate = false,
                 esTablas = false,
                 esAhogado = false,
+                esJaque = false, // <--- Limpieza del estado de jaque
                 currentTurn = PieceColor.ORO,
                 selectedPosition = null,
                 validMoves = emptyList(),
@@ -244,20 +363,46 @@ class BoardViewModel : ViewModel() {
             )
         }
     }
+    // Nueva función para limpieza total sin tocar Repository
+    fun iniciarModoLibre(size: Int) {
+        val piezasNuevas = NivelRepository.generarSetupPorDefecto(size)
+
+        _gameState.update { currentState ->
+            currentState.copy(
+                boardSize = size,
+                modoJuego = GameMode.LIBRE,
+                pieces = piezasNuevas,
+                currentPuzzle = null,       // Fundamental: quita el puzzle
+                nivelActualInt = 0,         // Resetea a 0 para que no detecte nivel
+                currentTurn = PieceColor.ORO,
+                selectedPosition = null,
+                validMoves = emptyList(),
+                esJaqueMate = false,
+                esTablas = false,
+                esJaque = false,
+                piezasComidasOro = emptyList(),
+                piezasComidasPlata = emptyList(),
+                historialTableros = listOf(piezasNuevas)
+            )
+        }
+    }
     private fun iniciarTemporizadorReloj() {
         viewModelScope.launch {
             while (true) {
                 val state = _gameState.value
-                if (state.modoTiempoActivado && !state.esJaqueMate && !state.esTablas && state.modoJuego == GameMode.LIBRE) {
-                    delay(100) // Solo espera 100ms si el modo tiempo está activo
+                // Solo actualizamos si el juego está activo y no ha terminado
+                if (state.modoTiempoActivado && !state.esJaqueMate && !state.esTablas && !state.esAhogado && state.modoJuego == GameMode.LIBRE) {
+                    // Actualizar cada 1 segundo es suficiente para un juego de ajedrez
+                    delay(1000)
                     _gameState.update { s ->
                         if (s.currentTurn == PieceColor.ORO)
-                            s.copy(oroTimeMillis = (s.oroTimeMillis - 100L).coerceAtLeast(0L))
+                            s.copy(oroTimeMillis = (s.oroTimeMillis - 1000L).coerceAtLeast(0L))
                         else
-                            s.copy(plataTimeMillis = (s.plataTimeMillis - 100L).coerceAtLeast(0L))
+                            s.copy(plataTimeMillis = (s.plataTimeMillis - 1000L).coerceAtLeast(0L))
                     }
                 } else {
-                    delay(1000) // Si no está activo, espera 1 segundo para no consumir CPU
+                    // Si el juego está en pausa o terminado, dormimos el hilo más tiempo
+                    delay(2000)
                 }
             }
         }
@@ -269,106 +414,72 @@ class BoardViewModel : ViewModel() {
     fun cambiarDificultad() {
         _gameState.update { it.copy(nivelActual = when(it.nivelActual) {
             NivelDificultad.PRINCIPIANTE -> NivelDificultad.INTERMEDIO
-            NivelDificultad.INTERMEDIO -> NivelDificultad.INFIERNO
+            NivelDificultad.INTERMEDIO -> NivelDificultad.AVANZADO
             else -> NivelDificultad.PRINCIPIANTE
         })}
     }
     fun cambiarTema() { _gameState.update { it.copy(temaActual = (it.temaActual + 1) % 8) } }
+    private fun cambiarNivel(n: Int) {
+        val config = NivelRepository.obtenerNivel(n) ?: return
 
-    private fun generarPiezasParaModo(size: Int, nivel: Int? = null): List<ChessPiece> {
-        if (size == 8) return setupInitialBoard()
-
-        // Usamos el nivel pasado como argumento, o si es nulo, el nivel guardado en el estado
-        val nivelAUsar = nivel ?: _gameState.value.nivelActualInt
-
-        val config = NivelRepository.totalNiveles[nivelAUsar]
-
-        // Si no encuentra el nivel (por seguridad), no regreses el nivel 1, regresa una lista vacía
-        // o maneja el error para que el tablero no se pinte con piezas erróneas
-        return validarPiezas(config?.piezas ?: emptyList(), size)
-    }
-
-    private fun subirDeNivelAutomatico() {
-        val estadoActual = _gameState.value
-        val siguienteNivel = estadoActual.nivelActualInt + 1
-        val maximoNiveles = NivelRepository.totalNiveles.size
-
-        if (siguienteNivel <= maximoNiveles) {
-            Log.d("JASC_DEBUG", "Avanzando al nivel: $siguienteNivel")
-            viewModelScope.launch {
-                delay(1000)
-                limpiarEstadoDePartida()
-                cambiarNivel(siguienteNivel)
-            }
-        } else {
-            // AQUÍ ESTÁ LA CLAVE: Cuando termina el juego, marcamos que terminó
-            // y NO incrementamos el nivel para que no ocurra un error de índice.
-            Log.d("JASC_DEBUG", "Juego completado, no hay más niveles.")
-            _gameState.update {
-                it.copy(
-                    puzzleResuelto = true,
-                    esJaqueMate = false, // Limpiamos el estado de mate
-                    mensajeFinal = "¡Increíble! Has dominado todos los niveles. ¡Eres un Gran Maestro!"
-                )
-            }
-        }
-    }
-
-    private fun validarPiezas(piezas: List<ChessPiece>, size: Int): List<ChessPiece> {
-        return piezas.filter {
-            it.position.row in 0 until size && it.position.col in 0 until size
-        }.also {
-            if (it.size < piezas.size) Log.e("JASC_ERROR", "¡Piezas fuera de rango eliminadas!")
-        }
-    }
-    fun limpiarEstadoDePartida() {
         _gameState.update { currentState ->
             currentState.copy(
+                nivelActualInt = n,
+                boardSize = config.size,
+                pieces = config.piezas,
+                modoJuego = GameMode.PUZZLE, // <--- ESTO EVITA QUE SALTE A 8x8
+                currentTurn = config.turnoInicial,
                 esJaque = false,
                 esJaqueMate = false,
+                esJuegoBloqueado = false,
+                puzzleStepIndex = 0,
                 selectedPosition = null,
                 validMoves = emptyList()
             )
         }
     }
 
-    private fun cambiarNivel(n: Int) {
-        val config = NivelRepository.totalNiveles[n]
-
-        if (config == null) {
-            Log.e("JASC_ERROR", "ERROR CRÍTICO: No existe la configuración para el nivel $n")
-            return // No hacemos nada, evitamos cargar el nivel 1 por error
+    private fun generarPiezasParaModo(size: Int, nivel: Int? = null): List<ChessPiece> {
+        // Si se pasa un nivel, intentamos cargar su configuración
+        if (nivel != null) {
+            val config = NivelRepository.totalNiveles[nivel]
+            if (config != null) return config.piezas
         }
 
-        _gameState.update { currentState ->
-            currentState.copy(
-                nivelActualInt = n,
-                pieces = config.piezas, // Forzamos las piezas exactas del nivel N
-                currentTurn = config.turnoInicial,
-                esJaque = false,
-                esJaqueMate = false,
-                esJuegoBloqueado = false,
-                historialTableros = listOf(config.piezas),
-                puzzleStepIndex = 0,
-                selectedPosition = null,
-                validMoves = emptyList(),
-                puzzleResuelto = false,
-                mensajeFinal = null,
-                // IMPORTANTE: Limpiamos el cementerio al cambiar de nivel
-                piezasComidasOro = emptyList(),
-                piezasComidasPlata = emptyList()
-            )
+        // Si no hay nivel, usamos el generador dinámico que pusimos en el Repository
+        return NivelRepository.generarSetupPorDefecto(size)
+    }
+
+    private fun subirDeNivelAutomatico() {
+        val estadoActual = _gameState.value
+        val siguienteNivel = estadoActual.nivelActualInt + 1
+
+        // Verificamos si existe en el mapa antes de intentar cargar
+        if (NivelRepository.totalNiveles.containsKey(siguienteNivel)) {
+            Log.d("JASC_DEBUG", "Avanzando al nivel: $siguienteNivel")
+            viewModelScope.launch {
+                delay(1000)
+                cambiarNivel(siguienteNivel)
+            }
+        } else {
+            // Si no hay más niveles, finalizamos con mensaje de victoria
+            _gameState.update {
+                it.copy(
+                    puzzleResuelto = true,
+                    mensajeFinal = "¡Increíble! Has dominado todos los niveles."
+                )
+            }
         }
     }
 
     private fun aplicarMovimiento(origen: Position, destino: Position) {
         _gameState.update { currentState ->
             val piezas = currentState.pieces.toMutableList()
-            val piezaMoviendose = piezas.find { it.position == origen }
+            val piezaMoviendose = piezas.find { it.position == origen } ?: return@update currentState
             val piezaCapturada = piezas.find { it.position == destino }
 
             // --- 1. Lógica de Enroque ---
-            if (piezaMoviendose?.type == PieceType.REY && Math.abs(destino.col - origen.col) == 2) {
+            if (piezaMoviendose.type == PieceType.REY && Math.abs(destino.col - origen.col) == 2) {
                 val esCorto = destino.col > origen.col
                 val torreY = origen.row
                 val torreX = if (esCorto) currentState.boardSize - 1 else 0
@@ -377,34 +488,26 @@ class BoardViewModel : ViewModel() {
             }
 
             // --- 2. Capturas y Cementerio ---
-            // Preparamos listas temporales basadas en el estado actual
-            var nuevasComidasOro = currentState.piezasComidasOro
-            var nuevasComidasPlata = currentState.piezasComidasPlata
+            val nuevasComidasOro = currentState.piezasComidasOro.toMutableList()
+            val nuevasComidasPlata = currentState.piezasComidasPlata.toMutableList()
 
             if (piezaCapturada != null) {
                 piezas.remove(piezaCapturada)
-                // Si es ORO, se añade al cementerio de Oro (y viceversa)
-                if (piezaCapturada.color == PieceColor.ORO) {
-                    nuevasComidasOro = nuevasComidasOro + piezaCapturada
-                } else {
-                    nuevasComidasPlata = nuevasComidasPlata + piezaCapturada
-                }
+                if (piezaCapturada.color == PieceColor.ORO) nuevasComidasOro.add(piezaCapturada)
+                else nuevasComidasPlata.add(piezaCapturada)
             }
 
+            // --- 3. Mover y Promocionar ---
+            var piezaFinal = piezaMoviendose.copy(position = destino, hasMoved = true)
 
-// 3. Mover la pieza y verificar promoción
-            if (piezaMoviendose != null) {
-                var piezaFinal = piezaMoviendose.copy(position = destino, hasMoved = true)
-
-                // REGLA DE PROMOCIÓN
-                val filaPromocion = if (piezaMoviendose.color == PieceColor.ORO) 0 else currentState.boardSize - 1
-                if (piezaMoviendose.type == PieceType.PEON && destino.row == filaPromocion) {
-                    piezaFinal = piezaFinal.copy(type = PieceType.REINA) // Promociona a Reina
-                }
-
-                val indice = piezas.indexOf(piezaMoviendose)
-                piezas[indice] = piezaFinal
+            // Regla de Promoción usando tu función validada
+            if (piezaFinal.type == PieceType.PEON && esCoronacionValida(piezaFinal, destino, currentState.boardSize)) {
+                piezaFinal = piezaFinal.copy(type = PieceType.REINA)
             }
+
+            // IMPORTANTE: Aquí actualizamos la lista con la pieza modificada
+            val indice = piezas.indexOf(piezaMoviendose)
+            piezas[indice] = piezaFinal
 
             // --- 4. Cálculo de Alertas y Estado ---
             val turnoSiguiente = if (currentState.currentTurn == PieceColor.ORO) PieceColor.PLATA else PieceColor.ORO
@@ -412,20 +515,23 @@ class BoardViewModel : ViewModel() {
             val esMate = enJaque && verificarSiEsJaqueMate(turnoSiguiente, piezas, currentState.boardSize)
             val esAhogado = !enJaque && esAhogado(turnoSiguiente, piezas, currentState.boardSize)
 
-            // --- 5. Retorno del Estado ---
+// --- 5. Retorno del Estado ---
             currentState.copy(
-                pieces = piezas,
+                pieces = piezas, // MANTENER LAS PIEZAS ACTUALES, NO REINICIAR
                 piezasComidasOro = nuevasComidasOro,
                 piezasComidasPlata = nuevasComidasPlata,
                 esJaque = enJaque,
                 esJaqueMate = esMate,
                 esAhogado = esAhogado,
-                esTablas = esAhogado || verificarTablasPorMaterial(piezas),
+                // Solo marcamos tablas, no forzamos cambios en las piezas
+                esTablas = (esAhogado || verificarTablasPorMaterial(piezas)) && !esMate,
                 selectedPosition = null,
                 validMoves = emptyList(),
                 currentTurn = turnoSiguiente,
+                // IMPORTANTE: NO AGREGUES EL HISTORIAL DE TABLEROS SI NO ES NECESARIO
+                // O ASEGÚRATE DE QUE LA LISTA ES LA ACTUAL Y NO UNA GENERADA
                 historialTableros = currentState.historialTableros + listOf(piezas),
-                casillaPista = null // <--- AÑADE ESTA LÍNEA AQUÍ
+                casillaPista = null
             )
         }
     }
@@ -609,9 +715,9 @@ class BoardViewModel : ViewModel() {
             _gameState.update { it.copy(pieces = piezasActualizadas, currentTurn = PieceColor.ORO) }
             evaluarEstadoFinal(piezasActualizadas, PieceColor.ORO)
         } else {
-            // 5. Si después de todo no hay movimientos posibles, es el fin de la partida
             Log.d("JASC_IA", "No hay movimientos legales, fin de partida.")
-            // El estado final de mate/tablas ya debería haber sido detectado por evaluarEstadoFinal
+            // Forzamos evaluación para detectar mate o tablas
+            evaluarEstadoFinal(estadoActual.pieces, PieceColor.ORO)
         }
     }
     private fun esAhogado(color: PieceColor, piezas: List<ChessPiece>, size: Int): Boolean {
@@ -662,7 +768,45 @@ class BoardViewModel : ViewModel() {
     }
 
     fun reiniciarTodoElProgreso() {
+        _gameState.update {
+            it.copy(
+                puzzleResuelto = false,      // Esto debería quitar el overlay
+                esJaqueMate = false,         // Limpiar flag de mate
+                mensajeFinal = null,         // Limpiar mensaje
+                esJuegoBloqueado = false,    // Limpiar bloqueo
+                // Si tu UI depende de esto, también límpialo:
+                selectedPosition = null,
+                validMoves = emptyList()
+            )
+        }
+        // Después de limpiar el estado, cargamos el nivel 1
         cambiarNivel(1)
+    }
+
+    fun finalizarYGuardarNivel() {
+        val currentState = _gameState.value
+
+        // 1. Crear la configuración del nivel actual
+        val nuevoNivelConfig = NivelConfig(
+            id = currentState.nivelActualInt + 1, // O el ID que corresponda
+            size = currentState.boardSize,
+            piezas = currentState.pieces,
+            turnoInicial = PieceColor.ORO
+        )
+
+        // 2. Guardar en el repositorio (esto añade el nivel al mapa)
+        NivelRepository.guardarNivel(nuevoNivelConfig)
+
+        // 3. Calcular siguiente nivel
+        val siguienteNivel = currentState.nivelActualInt + 1
+
+        // 4. Salir de edición y cargar
+        modoEdicion = false
+
+        // Cargamos el nivel recién creado (o el siguiente)
+        cambiarNivel(siguienteNivel)
+
+        Log.d("JASC_EDICION", "Nivel guardado. Nuevo nivel cargado: $siguienteNivel")
     }
 
 }
