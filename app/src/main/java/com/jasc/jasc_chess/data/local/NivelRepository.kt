@@ -45,12 +45,13 @@ object NivelRepository {
 
         4 to NivelConfig(4, 4, listOf(
             ChessPiece("n3_k", PieceType.REY, PieceColor.PLATA, Position(0, 3)),
-            ChessPiece("n3_P", PieceType.PEON, PieceColor.PLATA, Position(1, 2)),
+            ChessPiece("n3_P", PieceType.PEON, PieceColor.PLATA, Position(1, 0)),
             ChessPiece("n3_P", PieceType.PEON, PieceColor.PLATA, Position(1, 3)),
             ChessPiece("n1_t", PieceType.TORRE, PieceColor.PLATA, Position(0, 1)),
+
             ChessPiece("n3_q_oro", PieceType.REINA, PieceColor.ORO, Position(2, 0)),
             ChessPiece("n3_C_oro", PieceType.CABALLO, PieceColor.ORO, Position(3, 2)),
-            ChessPiece("n3_a_oro", PieceType.ALFIL, PieceColor.ORO, Position(2, 2))
+            ChessPiece("n3_t_oro", PieceType.TORRE  , PieceColor.ORO, Position(2, 2))
         ), PieceColor.ORO),
 
         5 to NivelConfig(5, 4, listOf(

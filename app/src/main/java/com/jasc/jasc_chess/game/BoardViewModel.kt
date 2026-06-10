@@ -20,6 +20,8 @@ import android.util.Log
 import com.jasc.jasc_chess.data.local.NivelRepository
 // En BoardViewModel.kt, añade esto en la sección de imports:
 import com.jasc.jasc_chess.data.local.NivelConfig
+import com.jasc.jasc_chess.audio.SoundManager // <--- ESTO ES LO QUE FALTA PARA EL ERROR DE "Unresolved reference 'SoundManager'"
+import com.jasc.jasc_chess.R
 class BoardViewModel : ViewModel() {
     private val _gameState = MutableStateFlow(GameState())
     val gameState: StateFlow<GameState> = _gameState.asStateFlow()
@@ -173,7 +175,7 @@ class BoardViewModel : ViewModel() {
         }
     }
 
-    // Función auxiliar para no repetir código de creación
+
     private fun crearPieza(seleccion: Pair<PieceType, PieceColor>, pos: Position): ChessPiece {
         return ChessPiece(
             id = "p_${pos.row}_${pos.col}_${System.currentTimeMillis()}",
@@ -183,12 +185,12 @@ class BoardViewModel : ViewModel() {
         )
     }
 
-    // NUEVA FUNCIÓN PARA ACTIVAR BORRADOR
+
     fun activarBorrador() {
         piezaSeleccionadaParaColocar = null // Al ser null, manejarEdicionTablero borrará
     }
 
-    // 3. Limpieza de métodos de control
+
     fun cerrarModoEdicion() {
         _gameState.update { it.copy(isEditingMode = false) }
         piezaSeleccionadaParaColocar = null // Limpiar selección al cerrar
@@ -283,7 +285,7 @@ class BoardViewModel : ViewModel() {
         }
     }
 
-    // 1. Función Maestra para iniciar el modo libre
+
     fun iniciarModoLibre(size: Int) {
         // Si es 8x8, forzamos un setup estándar. Si es 4x4, el que tengas en el Repository.
         val piezasNuevas = if (size == 8) {
@@ -314,7 +316,6 @@ class BoardViewModel : ViewModel() {
         }
     }
 
-    // 2. Función auxiliar necesaria (Asegúrate de que tus ChessPiece tengan estos IDs)
     private fun generarSetupEstandar8x8(): List<ChessPiece> {
         val piezas = mutableListOf<ChessPiece>()
 
@@ -334,7 +335,7 @@ class BoardViewModel : ViewModel() {
         return piezas
     }
 
-    // 3. ejecutarMovimientoLibre (Blindado)
+
     private fun ejecutarMovimientoLibre(position: Position) {
         val currentState = _gameState.value
         val origen = currentState.selectedPosition
@@ -558,14 +559,22 @@ class BoardViewModel : ViewModel() {
                 torre?.let { piezas[piezas.indexOf(it)] = it.copy(position = Position(torreY, if (esCorto) 5 else 3)) }
             }
 
-            // --- 2. Capturas y Cementerio ---
+// --- 2. Capturas y Cementerio ---
             val nuevasComidasOro = currentState.piezasComidasOro.toMutableList()
             val nuevasComidasPlata = currentState.piezasComidasPlata.toMutableList()
 
             if (piezaCapturada != null) {
+                SoundManager.play(R.raw.capture)
                 piezas.remove(piezaCapturada)
                 if (piezaCapturada.color == PieceColor.ORO) nuevasComidasOro.add(piezaCapturada)
                 else nuevasComidasPlata.add(piezaCapturada)
+            } else {
+                // --- LÓGICA DE SONIDO ESPECIAL ---
+                if (piezaMoviendose.type == PieceType.CABALLO) {
+                    SoundManager.play(R.raw.knight) // Sonido especial para el caballo
+                } else {
+                    SoundManager.play(R.raw.move)   // Sonido normal para el resto
+                }
             }
 
             // --- 3. Mover y Promocionar ---
@@ -586,21 +595,18 @@ class BoardViewModel : ViewModel() {
             val esMate = enJaque && verificarSiEsJaqueMate(turnoSiguiente, piezas, currentState.boardSize)
             val esAhogado = !enJaque && esAhogado(turnoSiguiente, piezas, currentState.boardSize)
 
-// --- 5. Retorno del Estado ---
+            // --- 5. Retorno del Estado ---
             currentState.copy(
-                pieces = piezas, // MANTENER LAS PIEZAS ACTUALES, NO REINICIAR
+                pieces = piezas,
                 piezasComidasOro = nuevasComidasOro,
                 piezasComidasPlata = nuevasComidasPlata,
                 esJaque = enJaque,
                 esJaqueMate = esMate,
                 esAhogado = esAhogado,
-                // Solo marcamos tablas, no forzamos cambios en las piezas
                 esTablas = (esAhogado || verificarTablasPorMaterial(piezas)) && !esMate,
                 selectedPosition = null,
                 validMoves = emptyList(),
                 currentTurn = turnoSiguiente,
-                // IMPORTANTE: NO AGREGUES EL HISTORIAL DE TABLEROS SI NO ES NECESARIO
-                // O ASEGÚRATE DE QUE LA LISTA ES LA ACTUAL Y NO UNA GENERADA
                 historialTableros = currentState.historialTableros + listOf(piezas),
                 casillaPista = null
             )
@@ -710,22 +716,28 @@ class BoardViewModel : ViewModel() {
         _gameState.update {
             it.copy(
                 pieces = if (esMate) {
-                    // Marcamos al rey como caído en la lista de piezas
                     piezas.map { pieza ->
                         if (pieza == reyDerrotado) pieza.copy(isFallen = true) else pieza
                     }
                 } else piezas,
                 esJaque = enJaque,
                 esJaqueMate = esMate,
-                esJuegoBloqueado = false, // Bloqueo desactivado para evitar alertas intrusivas
-                posicionReyDerrotado = reyDerrotado?.position, // Guardamos la posición para el cambio de color
+                esJuegoBloqueado = false,
+                posicionReyDerrotado = reyDerrotado?.position,
                 esAhogado = esAhogado,
                 esTablas = esAhogado || esTablasMaterial,
                 ganador = if (esMate) (if (colorTurno == PieceColor.ORO) PieceColor.PLATA else PieceColor.ORO) else null
             )
         }
 
+        // Lógica de sonido de Jaque (solo si hay jaque y no es mate aún)
+        if (enJaque && !esMate) {
+            SoundManager.play(R.raw.check)
+        }
+
+        // Lógica de subir nivel
         if (esMate && size == 4) {
+            // Podrías agregar un sonido de victoria aquí si tuvieras R.raw.win
             subirDeNivelAutomatico()
         }
     }

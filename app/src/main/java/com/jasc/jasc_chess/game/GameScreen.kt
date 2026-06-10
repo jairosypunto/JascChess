@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.foundation.clickable
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.ripple
+import com.jasc.jasc_chess.audio.SoundManager
 @Composable
 fun GameScreen(viewModel: BoardViewModel = viewModel()) {
     val gameState by viewModel.gameState.collectAsState()
@@ -256,8 +257,16 @@ fun GameScreen(viewModel: BoardViewModel = viewModel()) {
                     }
                 )
             }
-            // 2. FIN DE PARTIDA
+// 2. FIN DE PARTIDA
             else if (gameState.esJaqueMate || gameState.esTablas || gameState.esAhogado) {
+
+                // --- NUEVO: Dispara sonido solo si es Jaque Mate ---
+                LaunchedEffect(gameState.esJaqueMate) {
+                    if (gameState.esJaqueMate) {
+                        SoundManager.play(R.raw.mate) // Asegúrate que este sea el sonido del mate
+                    }
+                }
+
                 Box(modifier = Modifier.fillMaxSize().padding(top = 100.dp), contentAlignment = Alignment.TopCenter) {
                     Surface(
                         color = Color.Black.copy(alpha = 0.6f),
@@ -380,6 +389,10 @@ fun CementerioRow(label: String, piezas: List<ChessPiece>, gameState: GameState)
 @Composable
 fun VictoryOverlay(message: String, onDismiss: () -> Unit) {
     // Fondo semitransparente que cubre toda la pantalla
+    // ESTO DISPARA EL SONIDO UNA SOLA VEZ AL APARECER
+    LaunchedEffect(Unit) {
+        SoundManager.play(R.raw.victoria)
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
