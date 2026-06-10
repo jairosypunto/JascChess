@@ -60,14 +60,14 @@ fun GameScreen(viewModel: BoardViewModel = viewModel()) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Perfil
-                Surface(modifier = Modifier.padding(top = 16.dp, bottom = 20.dp).size(60.dp).clip(CircleShape).border(2.dp, Color(0xFFFFD700), CircleShape).clickable { launcher.launch("image/*") }, color = Color(0xFF1E293B)) {
+                Surface(modifier = Modifier.padding(top = 12.dp, bottom = 20.dp).size(60.dp).clip(CircleShape).border(2.dp, Color(0xFFFFD700), CircleShape).clickable { launcher.launch("image/*") }, color = Color(0xFF1E293B)) {
                     if (imageUri != null) AsyncImage(model = imageUri, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                     else Box(contentAlignment = Alignment.Center) { Text("👤", fontSize = 28.sp) }
                 }
 
                 // Info partida
                 Column(modifier = Modifier.fillMaxWidth().background(Color(0x1F000000)), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(modifier = Modifier.padding(top = 16.dp, bottom = 12.dp).background(Color(0xFF1E293B), RoundedCornerShape(20.dp)).border(1.dp, Color(0xFFFFD700), RoundedCornerShape(20.dp)).padding(horizontal = 24.dp, vertical = 6.dp).clickable { viewModel.cambiarDificultad() }) {
+                    Box(modifier = Modifier.padding(top = 12.dp, bottom = 12.dp).background(Color(0xFF1E293B), RoundedCornerShape(20.dp)).border(1.dp, Color(0xFFFFD700), RoundedCornerShape(20.dp)).padding(horizontal = 24.dp, vertical = 6.dp).clickable { viewModel.cambiarDificultad() }) {
                         Text(text = "NIVEL: ${gameState.nivelActual.name}", color = Color(0xFFFFD700), fontSize = 12.sp, fontWeight = FontWeight.Black)
                     }
                     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp).shadow(4.dp, RoundedCornerShape(12.dp)).background(Color(0xFF1E293B), RoundedCornerShape(12.dp)).clickable { viewModel.alternarModoTiempo() }) {
@@ -79,7 +79,6 @@ fun GameScreen(viewModel: BoardViewModel = viewModel()) {
 
 
                 CementerioRow("IMPERIO (ORO): ", gameState.piezasComidasOro, gameState)
-                CementerioRow("IA (PLATA): ", gameState.piezasComidasPlata, gameState)
 
 // ... (Código superior previo)
 
@@ -135,6 +134,8 @@ fun GameScreen(viewModel: BoardViewModel = viewModel()) {
                     }
                 }
 
+                CementerioRow("IA (PLATA): ", gameState.piezasComidasPlata, gameState)
+
 // ... (Resto del código hasta el final)
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -172,6 +173,7 @@ fun GameScreen(viewModel: BoardViewModel = viewModel()) {
                         }
                     }
                 }
+
 
                 // FILA DE BOTONES CIRCULARES (RECUPERADOS)
                 Row(
@@ -472,7 +474,7 @@ fun FooterFirma(viewModel: BoardViewModel) {
             },
             confirmButton = {
                 Button(onClick = {
-                    if (claveIngresada == "5678") { // Cámbiala por tu clave
+                    if (claveIngresada == "4792") { // Cámbiala por tu clave
                         viewModel.activarModoEdicion()
                         mostrarDialogoClave = false
                         claveIngresada = ""

@@ -86,8 +86,9 @@ fun MainMenuScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Image(painter = painterResource(id = R.drawable.logoprincipal), contentDescription = "Logo", modifier = Modifier.size(100.dp).padding(bottom = 24.dp))
-            Text(text = "JASC CHESS", fontSize = 32.sp, fontWeight = FontWeight.Black, color = Color.White, modifier = Modifier.padding(bottom = 48.dp))
+
+            Text(text = "JASC CHESS", fontSize = 32.sp, fontWeight = FontWeight.Black, color = Color.White, modifier = Modifier.padding(bottom = 12.dp))
+            Image(painter = painterResource(id = R.drawable.logoprincipal), contentDescription = "Logo", modifier = Modifier.size(100.dp).padding(bottom = 4.dp))
 
             val btnColor = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5A2B))
             val accentColor = ButtonDefaults.buttonColors(containerColor = Color(0xFFB45309))

@@ -1,5 +1,7 @@
 package com.jasc.jasc_chess.game
 
+import android.content.Context
+import com.jasc.jasc_chess.data.PreferencesManager // ASEGURA ESTA RUTA
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.*
@@ -184,12 +186,6 @@ class BoardViewModel : ViewModel() {
             position = pos
         )
     }
-
-
-    fun activarBorrador() {
-        piezaSeleccionadaParaColocar = null // Al ser null, manejarEdicionTablero borrará
-    }
-
 
     fun cerrarModoEdicion() {
         _gameState.update { it.copy(isEditingMode = false) }
@@ -612,7 +608,34 @@ class BoardViewModel : ViewModel() {
             )
         }
     }
+    // En tu BoardViewModel.kt
+    /**
+     * Procesa la victoria al completar un nivel, guardando el progreso
+     * y actualizando el estado de la UI para mostrar el mensaje de éxito.
+     */
+    fun procesarVictoria(context: Context) {
+        // 1. Obtenemos el nivel actual del estado
+        val nivelActual = _gameState.value.nivelActualInt
+        val siguienteNivel = nivelActual + 1
 
+        // 2. Persistimos el progreso (Solo guardará si es un nuevo nivel mayor)
+        PreferencesManager.guardarNivelMaximo(siguienteNivel, context)
+
+        // 3. Actualizamos el estado para disparar la UI de victoria (Overlay)
+        _gameState.update { currentState ->
+            currentState.copy(
+                puzzleResuelto = true,
+                // Si el nivel era 16 (el último), puedes poner un mensaje especial
+                mensajeFinal = if (nivelActual >= 16) {
+                    "¡Increíble! Has dominado todos los niveles."
+                } else {
+                    "¡Nivel $nivelActual Superado! El camino continúa..."
+                },
+                // Aseguramos que el juego se detenga o marque como resuelto
+                esJaqueMate = true
+            )
+        }
+    }
     fun realizarDesplazamiento(piezas: List<ChessPiece>, origen: Position, destino: Position): List<ChessPiece> {
         val nuevasPiezas = piezas.toMutableList()
         val piezaMovida = nuevasPiezas.find { it.position == origen } ?: return piezas
