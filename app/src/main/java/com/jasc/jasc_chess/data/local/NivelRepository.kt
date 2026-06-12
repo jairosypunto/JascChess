@@ -198,8 +198,77 @@ object NivelRepository {
             ChessPiece("p_0_3_1780876660724", PieceType.TORRE, PieceColor.PLATA, Position(0, 3)),
             ChessPiece("p_0_2_1780876668438", PieceType.REY, PieceColor.PLATA, Position(0, 2))
         ), PieceColor.ORO),
+        18 to NivelConfig(18, 4, listOf(
+            ChessPiece("p_1_3_1780877008581", PieceType.PEON, PieceColor.PLATA, Position(1, 3)),
+            ChessPiece("p_0_3_1780877020212", PieceType.REY, PieceColor.PLATA, Position(0, 3)),
+            ChessPiece("p_3_0_1780877095084", PieceType.CABALLO, PieceColor.ORO, Position(3, 0)),
+            ChessPiece("p_3_2_1780877102870", PieceType.REINA, PieceColor.ORO, Position(3, 2)),
+            ChessPiece("p_2_0_1780877455710", PieceType.ALFIL, PieceColor.ORO, Position(2, 0)),
+            ChessPiece("p_2_3_1780877481867", PieceType.PEON, PieceColor.ORO, Position(2, 3)),
+            ChessPiece("p_1_0_1780877491323", PieceType.PEON, PieceColor.PLATA, Position(1, 0)),
+            ChessPiece("p_0_0_1780877549511", PieceType.TORRE, PieceColor.PLATA, Position(0, 0))
+        ), PieceColor.ORO),
 
-    )
+        19 to NivelConfig(19, 4, listOf(
+            ChessPiece("n3_k", PieceType.REY, PieceColor.PLATA, Position(0, 3)),
+            ChessPiece("n3_P", PieceType.PEON, PieceColor.PLATA, Position(1, 0)),
+            ChessPiece("n3_P", PieceType.PEON, PieceColor.PLATA, Position(1, 3)),
+            ChessPiece("n1_t", PieceType.TORRE, PieceColor.PLATA, Position(0, 1)),
+
+            ChessPiece("n3_q_oro", PieceType.REINA, PieceColor.ORO, Position(2, 0)),
+            ChessPiece("n3_C_oro", PieceType.CABALLO, PieceColor.ORO, Position(3, 2)),
+            ChessPiece("n3_t_oro", PieceType.TORRE  , PieceColor.ORO, Position(2, 2))
+        ), PieceColor.ORO),
+
+        20 to NivelConfig(20, 4, listOf(
+            ChessPiece("n1_q", PieceType.REINA, PieceColor.PLATA, Position(1, 0)),
+            ChessPiece("n1_a", PieceType.ALFIL, PieceColor.PLATA, Position(1, 2)),
+            ChessPiece("n1_k", PieceType.REY, PieceColor.PLATA, Position(0, 2)),
+            ChessPiece("n1_p", PieceType.PEON, PieceColor.PLATA, Position(1, 1)),
+            ChessPiece("n1_t_oro", PieceType.TORRE, PieceColor.ORO, Position(1, 3)),
+            ChessPiece("n1_a_oro", PieceType.ALFIL, PieceColor.ORO, Position(3, 0)),
+            ChessPiece("n1_t_oro", PieceType.TORRE, PieceColor.ORO, Position(3, 3))
+        ), PieceColor.ORO),
+
+        21 to NivelConfig(21, 4, listOf(
+            ChessPiece("n1_k", PieceType.REY, PieceColor.PLATA, Position(0, 3)),
+            ChessPiece("n1_c", PieceType.CABALLO, PieceColor.PLATA, Position(2, 1)),
+            ChessPiece("n1_q_oro", PieceType.REINA, PieceColor.ORO, Position(3, 0)),
+            ChessPiece("n1_c_oro", PieceType.CABALLO, PieceColor.ORO, Position(3, 3))
+        ), PieceColor.ORO),
+
+        22 to NivelConfig(22, 4, listOf(
+            ChessPiece("n1_k", PieceType.REY, PieceColor.PLATA, Position(0, 0)),
+            ChessPiece("n1_t", PieceType.TORRE, PieceColor.PLATA, Position(0, 2)),
+            ChessPiece("n1_P", PieceType.PEON, PieceColor.PLATA, Position(1, 0)),
+            ChessPiece("n1_P", PieceType.PEON, PieceColor.PLATA, Position(1, 1)),
+            ChessPiece("n1_c_oro", PieceType.CABALLO, PieceColor.ORO, Position(2, 0)),
+            ChessPiece("n1_q_oro", PieceType.REINA, PieceColor.ORO, Position(2, 3))
+        ), PieceColor.ORO),
+
+        23 to NivelConfig(23, 4, listOf(
+            ChessPiece("n1_k", PieceType.REY, PieceColor.PLATA, Position(0, 3)),
+            ChessPiece("n1_t", PieceType.TORRE, PieceColor.PLATA, Position(0, 1)),
+            ChessPiece("n1_a", PieceType.ALFIL, PieceColor.PLATA, Position(0, 0)),
+            ChessPiece("n1_t", PieceType.TORRE, PieceColor.PLATA, Position(1, 0)),
+            ChessPiece("n1_p", PieceType.PEON, PieceColor.PLATA, Position(1, 1)),
+            ChessPiece("n1_p_oro", PieceType.PEON, PieceColor.ORO, Position(2, 3)),
+            ChessPiece("n3_a_oro", PieceType.ALFIL, PieceColor.ORO, Position(3, 1)),
+            ChessPiece("n3_a_oro", PieceType.ALFIL, PieceColor.ORO, Position(3, 2))
+        ), PieceColor.ORO),
+
+        24 to NivelConfig(24, 4, listOf(
+            ChessPiece("n1_k", PieceType.REY, PieceColor.PLATA, Position(0, 1)),
+            ChessPiece("n1_a", PieceType.ALFIL, PieceColor.PLATA, Position(1, 2)),
+            ChessPiece("n1_q", PieceType.REINA, PieceColor.PLATA, Position(2, 0)),
+            ChessPiece("n1_p", PieceType.PEON, PieceColor.PLATA, Position(3, 1)),
+            ChessPiece("n1_p", PieceType.PEON, PieceColor.PLATA, Position(1, 0)),
+            ChessPiece("n1_q_oro", PieceType.REINA, PieceColor.ORO, Position(2, 2)),
+            ChessPiece("n3_c_oro", PieceType.CABALLO, PieceColor.ORO, Position(3, 2))
+        ), PieceColor.ORO),
+
+
+        )
 
 // Dentro de object NivelRepository, al final de la clase
 

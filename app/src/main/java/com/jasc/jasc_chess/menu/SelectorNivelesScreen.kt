@@ -23,15 +23,44 @@ import androidx.navigation.NavController
 import com.jasc.jasc_chess.game.BoardViewModel
 import com.jasc.jasc_chess.data.local.PreferencesManager
 import com.jasc.jasc_chess.data.local.NivelRepository // <--- ESTO FALTA
+import androidx.compose.foundation.shape.RoundedCornerShape // <-- IMPORTACIÓN NECESARIA
+import androidx.compose.runtime.mutableIntStateOf // <-- OPTIMIZACIÓN
+
 @Composable
 fun SelectorNivelesScreen(navController: NavController, viewModel: BoardViewModel) {
     val context = LocalContext.current
-    val nivelMaximo = remember { mutableStateOf(PreferencesManager.obtenerNivelMaximo(context)) }
+
+    // Inicializamos el contexto en el VM para evitar el error de parámetro
+    LaunchedEffect(Unit) {
+        viewModel.setContext(context)
+    }
+
+    val nivelMaximo = remember { mutableIntStateOf(PreferencesManager.obtenerNivelMaximo(context)) }
+    val puntosTotales = remember { mutableIntStateOf(PreferencesManager.obtenerPuntos(context)) }
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0F172A))) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp, end = 20.dp),
+            horizontalArrangement = Arrangement.End
+        ) {
+            Surface(
+                color = Color(0xFF1E293B),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, Color.Yellow)
+            ) {
+                Text(
+                    text = "💰 PUNTOS: ${puntosTotales.intValue}",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    color = Color.Yellow,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            }
+        }
+
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 40.dp, bottom = 40.dp),
+            contentPadding = PaddingValues(top = 80.dp, bottom = 40.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             item {
@@ -39,11 +68,10 @@ fun SelectorNivelesScreen(navController: NavController, viewModel: BoardViewMode
                 Spacer(modifier = Modifier.height(30.dp))
             }
 
-// CAMBIO EN LA LÍNEA 27:
             items(NivelRepository.totalNiveles.size) { index ->
                 val nivel = index + 1
-                val estaDesbloqueado = nivel <= nivelMaximo.value
-                val estaCompletado = nivel < nivelMaximo.value
+                val estaDesbloqueado = nivel <= nivelMaximo.intValue
+                val estaCompletado = nivel < nivelMaximo.intValue
 
                 val horizontalPadding = when (index % 4) {
                     1 -> 100.dp
@@ -58,16 +86,19 @@ fun SelectorNivelesScreen(navController: NavController, viewModel: BoardViewMode
                     modifier = Modifier.offset(x = horizontalPadding),
                     onClick = {
                         if (estaDesbloqueado) {
-                            // Llamada a la lógica del juego
                             viewModel.cargarPartida(nivel)
                             navController.navigate("juego")
                         }
                     }
                 )
 
-// CAMBIO EN LA LÍNEA 48:
                 if (nivel < NivelRepository.totalNiveles.size) {
-                    Box(modifier = Modifier.height(40.dp).width(4.dp).background(if (estaCompletado) Color.Yellow else Color.Gray.copy(alpha = 0.3f)))
+                    Box(
+                        modifier = Modifier
+                            .height(40.dp)
+                            .width(4.dp)
+                            .background(if (estaCompletado) Color.Yellow else Color.Gray.copy(alpha = 0.3f))
+                    )
                 }
             }
         }
@@ -82,13 +113,18 @@ fun NivelNode(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    // Lógica para detectar si es nivel 10, 20, 30...
+    val esNivelEspecial = nivel % 10 == 0
+
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier.padding(vertical = 8.dp)) {
         Surface(
             modifier = Modifier
                 .size(75.dp)
                 .clip(CircleShape)
                 .clickable(enabled = estaDesbloqueado) { onClick() },
+            // CAMBIO: Si es especial, usamos dorado; si no, tu lógica original
             color = when {
+                esNivelEspecial -> Color(0xFFFFD700) // Dorado para niveles de coronación
                 estaCompletado -> Color(0xFF10B981) // Verde para completado
                 estaDesbloqueado -> Color(0xFF6D28D9) // Morado para activo
                 else -> Color(0xFF334155) // Gris para bloqueado
@@ -97,10 +133,15 @@ fun NivelNode(
         ) {
             Box(contentAlignment = Alignment.Center) {
                 if (estaDesbloqueado) {
+                    // CAMBIO: Si es especial, mostramos corona; si no, número o check
                     Text(
-                        text = if (estaCompletado) "✓" else nivel.toString(),
-                        color = Color.White,
-                        fontSize = 24.sp,
+                        text = when {
+                            esNivelEspecial -> "👑"
+                            estaCompletado -> "✓"
+                            else -> nivel.toString()
+                        },
+                        color = if (esNivelEspecial) Color.Black else Color.White,
+                        fontSize = if (esNivelEspecial) 30.sp else 24.sp,
                         fontWeight = FontWeight.Bold
                     )
                 } else {

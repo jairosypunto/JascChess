@@ -57,55 +57,57 @@ class BoardViewModel : ViewModel() {
         _gameState.update { it.copy(isEditingMode = true) }
     }
 
-    fun configurarPartida(nuevoSize: Int, nuevoModo: GameMode, puzzle: ChessPuzzle? = null) {
-        Log.d("JASC_DEBUG", "Iniciando configuración: tamaño=$nuevoSize, modo=$nuevoModo")
+    fun obtenerMensajeDeRecompensa(puntos: Int): String? {
+        return when {
+            puntos >= 1000 && puntos < 1100 -> "¡Felicidades! Has alcanzado los 1000 puntos. ¡Eres un estratega nato!"
+            puntos >= 2500 && puntos < 2600 -> "¡Impresionante! 2500 puntos. ¡El dominio del tablero es tuyo!"
+            // Puedes añadir más hitos aquí
+            else -> null
+        }
+    }
 
-        // 1. Generación de piezas robusta
+    fun configurarPartida(
+        nuevoSize: Int,
+        nuevoModo: GameMode,
+        puzzle: ChessPuzzle? = null,
+        nivel: Int = 0 // Agregamos nivel opcional
+    ) {
+        Log.d("JASC_DEBUG", "Configurando: nivel=$nivel, tamaño=$nuevoSize, modo=$nuevoModo")
+
         val piezasNuevas = try {
             when {
-                // Caso A: Si es Puzzle, usamos el FEN del puzzle
+                // PRIORIDAD 1: Si solicitaste un nivel de la base de datos
+                nivel > 0 -> {
+                    NivelRepository.obtenerNivel(nivel)?.piezas ?: NivelRepository.generarSetupPorDefecto(nuevoSize)
+                }
+
+                // PRIORIDAD 2: Si es un puzzle clásico (de los que ya tenías)
                 puzzle != null -> FENParser.parse(puzzle.fen, nuevoSize)
 
-                // Caso B: Si es Modo Libre 8x8, forzamos setup estándar
+                // PRIORIDAD 3: Modo Libre
                 nuevoModo == GameMode.LIBRE && nuevoSize == 8 -> generarSetupEstandar8x8()
 
-                // Caso C: Cualquier otro caso (Puzzles personalizados o tamaños reducidos)
-                else -> generarPiezasParaModo(nuevoSize)
+                // PRIORIDAD 4: Fallback inteligente (usar generador profesional)
+                else -> NivelRepository.generarSetupProfesional(nuevoSize)
             }
         } catch (e: Exception) {
-            Log.e("JASC_ERROR", "Error al configurar tablero: ${puzzle?.fen}", e)
-            // Fallback seguro: intentar generar un tablero básico
+            Log.e("JASC_ERROR", "Error al configurar: ${e.message}")
             generarSetupEstandar8x8()
         }
 
-        // 2. Actualización de estado centralizada
         _gameState.update { currentState ->
             currentState.copy(
-                boardSize = nuevoSize,
-                modoJuego = nuevoModo,
+                boardSize = if (nivel > 0) (NivelRepository.obtenerNivel(nivel)?.size ?: nuevoSize) else nuevoSize,
                 pieces = piezasNuevas,
+                modoJuego = nuevoModo,
+                nivelActualInt = nivel, // Guardamos el nivel actual
                 currentPuzzle = puzzle,
-                puzzleStepIndex = 0,
-                currentTurn = PieceColor.ORO,
+                // ... (resto de tus campos iguales)
                 partidaIniciada = true,
                 selectedPosition = null,
-
-                // Gestión de movimientos permitidos
-                validMoves = if (nuevoModo == GameMode.PUZZLE && puzzle != null) {
-                    puzzle.requiredMoves.toList()
-                } else {
-                    emptyList<Move>()
-                },
-
-                // Limpieza total del estado de partida anterior
+                validMoves = if (nuevoModo == GameMode.PUZZLE && puzzle != null) puzzle.requiredMoves.toList() else emptyList(),
                 esJaqueMate = false,
-                esTablas = false,
-                esJaque = false,
-                esAhogado = false,
                 victoriaMostrada = false,
-                piezasComidasOro = emptyList(),
-                piezasComidasPlata = emptyList(),
-                historialTableros = listOf(piezasNuevas),
                 lastUpdate = System.currentTimeMillis()
             )
         }
@@ -780,21 +782,55 @@ class BoardViewModel : ViewModel() {
         }
     }
 
-    private fun procesarFinDeNivel(nivel: Int) {
-        // 1. Sumar puntos (Llamamos a tu PreferencesManager)
-        // Asumimos 100 puntos por nivel
-        // Nota: Necesitas pasar el context. Si no puedes pasarlo, usa un valor que guardes en memoria y sincronices después
-        Log.d("JASC_PUNTOS", "Nivel $nivel superado. Sumando 100 puntos.")
+// En BoardViewModel.kt
 
-        // 2. Disparar evento de video si es nivel 10, 20, 30...
+    // Añade esta variable para acumular puntos en memoria durante la partida
+    private var puntosAcumuladosEnSesion = 0
+
+    // Dentro de BoardViewModel
+    private var _appContext: Context? = null // <-- AGREGA ESTA VARIABLE
+
+    fun setContext(context: Context) {
+        _appContext = context.applicationContext
+    }
+    private fun procesarFinDeNivel(nivel: Int) {
+        val context = _appContext ?: return
+
+        val puntosPorNivel = 100
+        val nuevosPuntos = _gameState.value.puntosTotales + puntosPorNivel
+
+        // 1. Guardar y actualizar puntos
+        PreferencesManager.guardarPuntos(puntosPorNivel, context)
+        _gameState.update { it.copy(puntosTotales = nuevosPuntos) }
+
+        // 2. Lógica de Video (Prioridad alta)
         if (nivel % 10 == 0) {
-            val videoRes = when(nivel) {
+            val videoRes = when (nivel) {
                 10 -> R.raw.video_felicitacion_10
                 20 -> R.raw.video_felicitacion_20
                 else -> R.raw.video_felicitacion_default
             }
             _gameState.update { it.copy(videoEventoPendiente = videoRes) }
         }
+        // 3. Lógica de Recompensa (Solo si no hubo video, para no saturar la pantalla)
+        else {
+            val mensaje = obtenerMensajeDeRecompensa(nuevosPuntos)
+            if (mensaje != null) {
+                _gameState.update { it.copy(mensajeError = mensaje) }
+
+                // Limpiar el mensaje automáticamente después de 3 segundos
+                viewModelScope.launch {
+                    delay(3000)
+                    _gameState.update { it.copy(mensajeError = null) }
+                }
+            }
+        }
+    }
+
+    // NUEVA FUNCIÓN PARA PERSISTIR (Llamada desde la UI al cerrar la partida)
+    fun guardarProgresoFinal(context: Context) {
+        PreferencesManager.guardarPuntos(puntosAcumuladosEnSesion, context)
+        puntosAcumuladosEnSesion = 0 // Reiniciamos el contador de sesión
     }
 
     // En BoardViewModel.kt

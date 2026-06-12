@@ -163,12 +163,19 @@ fun GameScreen(
                 FooterFirma(viewModel)
             }
 
-// --- 1. VIDEO DE FELICITACIÓN (Capa superior, sin fondo oscuro) ---
+// --- 1. VIDEO DE FELICITACIÓN ---
             val videoAEjecutar = gameState.videoEventoPendiente
+
             if (videoAEjecutar != null) {
                 VideoFelicitacion(
                     nivel = gameState.nivelActualInt,
-                    onDismiss = { viewModel.limpiarVideoEvento() }
+                    onDismiss = {
+                        // 1. Guardamos el progreso antes de limpiar el evento
+                        viewModel.guardarProgresoFinal(context)
+
+                        // 2. Limpiamos el estado para que el video se cierre
+                        viewModel.limpiarVideoEvento()
+                    }
                 )
             }
 
@@ -314,6 +321,7 @@ fun VictoryOverlay(
                 onClick = {
                     // 1. Ejecutamos la función que guarda nivel y avanza
                     viewModel.avanzarAlSiguienteNivel(context)
+                    viewModel.guardarProgresoFinal(context)
                     // 2. Cerramos el overlay
                     onDismiss()
                 },
@@ -534,8 +542,8 @@ private fun obtenerResourcePieza(
 @Composable
 fun VideoFelicitacion(nivel: Int, onDismiss: () -> Unit) {
     val mensaje = when (nivel) {
-        10 -> "¡La Reina está orgullosa! Has dominado el nivel 10."
-        20 -> "¡El Rey te saluda! Has superado el nivel 20."
+        10 -> "¡Has alcanzado el nivel 10: tu estrategia brilla, tu paciencia vence y tu visión domina el tablero."
+        20 -> "¡Has superado el nivel 20: tu mente teje estrategias, tu paciencia abre caminos y cada jugada fortalece tu visión en el tablero."
         else -> "¡Victoria magistral!"
     }
 
