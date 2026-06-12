@@ -7,5 +7,5 @@ Generas tu archivo .apk desde Android Studio (Build > Build APK(s)).
 Vas a tu repositorio en GitHub y creas el Release con ese APK.
 
 git add .
-git commit -m "Limpieza de remotos y unificación de repositorio"
+git commit -m "se organiza lo de niveles y edicción"
 git push origin main

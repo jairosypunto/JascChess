@@ -57,5 +57,6 @@ data class GameState(
     val esJuegoBloqueado: Boolean = false,
     val puntosTotales: Int = 0,
     // --- CONFIGURACIÓN ---
-    val nivelActual: NivelDificultad = NivelDificultad.PRINCIPIANTE
+    val nivelActual: NivelDificultad = NivelDificultad.PRINCIPIANTE,
+    val videoEventoPendiente: Int? = null,
 )

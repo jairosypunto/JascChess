@@ -744,7 +744,6 @@ class BoardViewModel : ViewModel() {
 // 1. Función limpia, sin dependencia de Context
     private fun evaluarEstadoFinal(piezas: List<ChessPiece>, colorTurno: PieceColor) {
         val currentState = _gameState.value
-
         if (currentState.estaCargandoNivel) return
 
         val size = currentState.boardSize
@@ -757,9 +756,7 @@ class BoardViewModel : ViewModel() {
 
         _gameState.update { state ->
             state.copy(
-                pieces = if (esMate) {
-                    piezas.map { if (it == reyDerrotado) it.copy(isFallen = true) else it }
-                } else piezas,
+                pieces = if (esMate) piezas.map { if (it == reyDerrotado) it.copy(isFallen = true) else it } else piezas,
                 esJaque = enJaque,
                 esJaqueMate = esMate,
                 esJuegoBloqueado = false,
@@ -770,14 +767,40 @@ class BoardViewModel : ViewModel() {
             )
         }
 
-        if (enJaque && !esMate) {
+        // --- INTEGRACIÓN DE PUNTOS Y VICTORIA ---
+        if (esMate) {
+            SoundManager.play(R.raw.victoria) // Asegúrate de tener sonido de victoria
+
+            // Aquí sumamos puntos y verificamos evento de video
+            // IMPORTANTE: Debes pasar el 'context' desde tu vista,
+            // o si prefieres, usa un método que no requiera contexto si ya guardas en memoria
+            procesarFinDeNivel(currentState.nivelActualInt)
+        } else if (enJaque) {
             SoundManager.play(R.raw.check)
         }
-
-        // NOTA: Si es mate, la UI lo detectará por 'esJaqueMate = true' y ahí ejecutaremos el guardado.
     }
 
+    private fun procesarFinDeNivel(nivel: Int) {
+        // 1. Sumar puntos (Llamamos a tu PreferencesManager)
+        // Asumimos 100 puntos por nivel
+        // Nota: Necesitas pasar el context. Si no puedes pasarlo, usa un valor que guardes en memoria y sincronices después
+        Log.d("JASC_PUNTOS", "Nivel $nivel superado. Sumando 100 puntos.")
 
+        // 2. Disparar evento de video si es nivel 10, 20, 30...
+        if (nivel % 10 == 0) {
+            val videoRes = when(nivel) {
+                10 -> R.raw.video_felicitacion_10
+                20 -> R.raw.video_felicitacion_20
+                else -> R.raw.video_felicitacion_default
+            }
+            _gameState.update { it.copy(videoEventoPendiente = videoRes) }
+        }
+    }
+
+    // En BoardViewModel.kt
+    fun limpiarVideoEvento() {
+        _gameState.update { it.copy(videoEventoPendiente = null) }
+    }
     private fun ejecutarTurnoIA() {
         val estadoActual = _gameState.value
         val piezasIA = estadoActual.pieces.filter { it.color == PieceColor.PLATA }

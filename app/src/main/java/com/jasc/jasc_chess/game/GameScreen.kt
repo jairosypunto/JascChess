@@ -32,6 +32,9 @@ import com.jasc.jasc_chess.model.*
 import com.jasc.jasc_chess.ui.components.TimerComponent // <-- SOLUCIONA TimerComponent
 import com.jasc.jasc_chess.ui.components.ChessPieceView // <-- SOLUCIONA ChessPieceView
 import com.jasc.jasc_chess.audio.SoundManager
+import com.jasc.jasc_chess.audio.VideoPlayer
+
+
 @Composable
 fun GameScreen(
     viewModel: BoardViewModel,
@@ -160,8 +163,17 @@ fun GameScreen(
                 FooterFirma(viewModel)
             }
 
-// --- VICTORIA ---
-            if (gameState.esJaqueMate && !gameState.estaCargandoNivel) {
+// --- 1. VIDEO DE FELICITACIÓN (Capa superior, sin fondo oscuro) ---
+            val videoAEjecutar = gameState.videoEventoPendiente
+            if (videoAEjecutar != null) {
+                VideoFelicitacion(
+                    nivel = gameState.nivelActualInt,
+                    onDismiss = { viewModel.limpiarVideoEvento() }
+                )
+            }
+
+            // --- 2. OVERLAY DE VICTORIA (Solo aparece si NO hay video reproduciéndose) ---
+            if (gameState.esJaqueMate && !gameState.estaCargandoNivel && videoAEjecutar == null) {
                 VictoryOverlay(
                     message = gameState.mensajeFinal ?: "¡Puzzle Completado!",
                     viewModel = viewModel,
@@ -169,12 +181,10 @@ fun GameScreen(
                 )
             }
 
-            // --- AVISO DE ERROR (Colócalo aquí abajo) ---
+            // --- 3. AVISO DE ERROR (Capa superior absoluta) ---
             if (gameState.mensajeError != null) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxSize().padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Surface(
@@ -460,6 +470,26 @@ private fun obtenerResourcePieza(
                 PieceType.REY -> R.drawable.tradicional1_rey_negro
             }
         }
+
+        EstiloFichas.TRADICIONAL2 -> if (color == PieceColor.ORO) {
+            when (tipo) {
+                PieceType.PEON -> R.drawable.tradicional2_peon_blanco
+                PieceType.TORRE -> R.drawable.tradicional2_torre_blanca
+                PieceType.CABALLO -> R.drawable.tradicional2_caballo_blanco
+                PieceType.ALFIL -> R.drawable.tradicional2_alfil_blanco
+                PieceType.REINA -> R.drawable.tradicional2_reina_blanca
+                PieceType.REY -> R.drawable.tradicional2_rey_blanco
+            }
+        } else {
+            when (tipo) {
+                PieceType.PEON -> R.drawable.tradicional2_peon_negro
+                PieceType.TORRE -> R.drawable.tradicional2_torre_negra
+                PieceType.CABALLO -> R.drawable.tradicional2_caballo_negro
+                PieceType.ALFIL -> R.drawable.tradicional2_alfil_negro
+                PieceType.REINA -> R.drawable.tradicional2_reina_negra
+                PieceType.REY -> R.drawable.tradicional2_rey_negro
+            }
+        }
         EstiloFichas.TRADICIONAL3 -> if (color == PieceColor.ORO) {
             when (tipo) {
                 PieceType.PEON -> R.drawable.tradicional3_peon_blanco
@@ -499,6 +529,54 @@ private fun obtenerResourcePieza(
             }
         }
 
+    }
+}
+@Composable
+fun VideoFelicitacion(nivel: Int, onDismiss: () -> Unit) {
+    val mensaje = when (nivel) {
+        10 -> "¡La Reina está orgullosa! Has dominado el nivel 10."
+        20 -> "¡El Rey te saluda! Has superado el nivel 20."
+        else -> "¡Victoria magistral!"
+    }
+
+    // Definimos los recursos de video de forma segura
+    val videoRes = when (nivel) {
+        10 -> R.raw.video_felicitacion_10
+        20 -> R.raw.video_felicitacion_20
+        else -> R.raw.victoria // Asegúrate de que victoria.mp3 exista en /raw
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.95f))
+    ) {
+        // Reproductor de video ocupando todo el fondo
+        VideoPlayer(
+            videoRes = videoRes,
+            onDismiss = onDismiss
+        )
+
+        // Texto informativo flotando en la parte inferior
+        Text(
+            text = mensaje,
+            color = Color.Yellow,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 64.dp)
+        )
+
+        // Indicador opcional para cerrar
+        Text(
+            text = "(Toca la pantalla para continuar)",
+            color = Color.White.copy(alpha = 0.5f),
+            fontSize = 12.sp,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 24.dp)
+        )
     }
 }
 
