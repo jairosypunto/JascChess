@@ -39,14 +39,18 @@ class BoardViewModel : ViewModel() {
         val config = NivelRepository.totalNiveles[nivelId]
 
         if (config != null) {
-            // IMPORTANTE: Pasamos config.size para que el motor sepa que el tablero creció
             configurarPartida(config.size, GameMode.PUZZLE)
 
             _gameState.update { it.copy(
                 pieces = config.piezas,
                 nivelActualInt = nivelId,
                 currentTurn = config.turnoInicial,
-                boardSize = config.size // <--- ESTO ES LO QUE HACE QUE EL 5x5 Y 6x6 SE DIBUJEN BIEN
+                boardSize = config.size,
+
+                // --- ESTAS TRES LÍNEAS MATAN EL LETRERO ---
+                mensajeError = null,
+                esJuegoBloqueado = false,
+                puzzleStepIndex = 0
             )}
         }
     }
@@ -355,43 +359,42 @@ class BoardViewModel : ViewModel() {
     fun validarJugadaPuzzle(origen: Position, destino: Position) {
         val state = _gameState.value
 
-        // 1. Verificamos si el movimiento es válido
-        val movimiento = state.validMoves.find { it.to == destino } ?: return
+        // Si ya está bloqueado, no hacemos nada más
+        if (state.esJuegoBloqueado) return
 
+        val movimiento = state.validMoves.find { it.to == destino } ?: return
         val piezasDespues = realizarDesplazamiento(state.pieces, origen, destino)
         val nuevoStep = state.puzzleStepIndex + 1
 
-        // 2. Evaluamos el estado tras el movimiento
+        // Evaluamos el estado final después del movimiento
         evaluarEstadoFinal(piezasDespues, PieceColor.PLATA)
-        val estadoPostMovimiento = _gameState.value
+        val estadoPost = _gameState.value
 
-        // Caso A: El usuario logró el Jaque Mate
-        if (estadoPostMovimiento.esJaqueMate) {
+        // --- A. VICTORIA ---
+        if (estadoPost.esJaqueMate) {
             _gameState.update { it.copy(
                 pieces = piezasDespues,
                 puzzleResuelto = true,
                 mensajeFinal = "¡Nivel ${state.nivelActualInt} Superado!",
-                mensajeError = null // Limpiamos cualquier error previo
+                mensajeError = null
             )}
         }
-        // Caso B: El usuario falló el Mate en 2 (agotó los pasos o movimiento incorrecto)
-        else if (nuevoStep >= 2) {
+        // --- B. FALLO (Bloqueo) ---
+        // SOLO fallamos si ya completamos los 2 pasos permitidos y NO es mate
+        else if (nuevoStep >= 2 && state.puzzleStepIndex >= 1) {
             _gameState.update { it.copy(
                 esJuegoBloqueado = true,
-                selectedPosition = null,
-                validMoves = emptyList(),
-                // Activamos el aviso de error para que la UI lo muestre
                 mensajeError = "¡Intenta Mate en 2!"
             )}
 
+            // Lanzamos el reseteo automático
             viewModelScope.launch {
-                delay(1500) // Tiempo para que el usuario lea el mensaje
-                // Limpiamos el error y recargamos el nivel
-                _gameState.update { it.copy(mensajeError = null) }
+                delay(2000)
+                // IMPORTANTE: Esto limpia el bloqueo y reinicia el estado
                 cargarPartida(state.nivelActualInt)
             }
         }
-        // Caso C: Continuar puzzle (primera jugada realizada, esperando respuesta IA)
+        // --- C. CONTINUAR ---
         else {
             _gameState.update { it.copy(
                 pieces = piezasDespues,
@@ -400,10 +403,13 @@ class BoardViewModel : ViewModel() {
                 validMoves = emptyList()
             )}
 
-            viewModelScope.launch {
-                delay(500)
-                if (state.currentPuzzle != null) ejecutarRespuestaIA(state.currentPuzzle)
-                else ejecutarTurnoIA()
+            // Si es el primer movimiento, dejamos que la IA juegue
+            if (nuevoStep == 1) {
+                viewModelScope.launch {
+                    delay(600)
+                    if (state.currentPuzzle != null) ejecutarRespuestaIA(state.currentPuzzle)
+                    else ejecutarTurnoIA()
+                }
             }
         }
     }
@@ -539,38 +545,40 @@ class BoardViewModel : ViewModel() {
 
     fun avanzarAlSiguienteNivel(context: Context) {
         val estadoActual = _gameState.value
+
+        // SI ESTÁS EN MODO LIBRE: No avances niveles, solo muestra la victoria
+        if (estadoActual.modoJuego == GameMode.LIBRE) {
+            _gameState.update { it.copy(
+                puzzleResuelto = true,
+                mensajeFinal = "¡Jaque Mate! ¡Excelente jugada!"
+            )}
+            return // Salimos aquí para que no intente avanzar niveles
+        }
+
+        // SI ESTÁS EN MODO PUZZLE:
         val nivelActual = estadoActual.nivelActualInt
         val siguienteNivel = nivelActual + 1
         val totalNiveles = NivelRepository.totalNiveles.size
 
-        // 1. Verificamos si existe el siguiente nivel
         if (NivelRepository.totalNiveles.containsKey(siguienteNivel)) {
-
-            // 2. Lógica de mensajes motivadores según el rango
             val mensaje = when (siguienteNivel) {
-                in 11..20 -> "¡Nivel $nivelActual superado! Pasaste a la parte media. ¡Bien hecho!"
-                in 21..30 -> "¡Impresionante! De $nivelActual a $siguienteNivel. Ya tienes una lógica excelente."
-                in 31..40 -> "¡Eres un crack del ajedrez! Dominando el nivel $siguienteNivel."
+                in 11..20 -> "¡Nivel $nivelActual superado! ¡Bien hecho!"
+                in 21..30 -> "¡Impresionante! Ya tienes una lógica excelente."
                 else -> "¡Nivel $nivelActual completado! Vamos por el $siguienteNivel."
             }
 
-            // 3. Guardamos progreso y avanzamos
             PreferencesManager.guardarNivelMaximo(siguienteNivel, context)
-
-            // Actualizamos estado con el mensaje motivador antes de cambiar
             _gameState.update { it.copy(mensajeFinal = mensaje) }
 
-            // Cargamos el nuevo nivel automáticamente como querías
             viewModelScope.launch {
-                delay(1500) // Un pequeño respiro para leer el mensaje
+                delay(1500)
                 cambiarNivel(siguienteNivel)
             }
         } else {
-            // 4. Llegamos al final (Coronación)
             _gameState.update {
                 it.copy(
                     puzzleResuelto = true,
-                    mensajeFinal = "¡FELICIDADES! Has completado los $totalNiveles niveles. Eres un Maestro del Ajedrez."
+                    mensajeFinal = "¡FELICIDADES! Has completado todos los niveles. Eres un Maestro."
                 )
             }
         }
