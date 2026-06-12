@@ -111,7 +111,7 @@ fun MainMenuScreen(
                     navController.navigate("juego")
                 },
                 modifier = Modifier.fillMaxWidth(0.6f).height(50.dp), colors = accentColor
-            ) { Text("Prácticas (4x4)", fontSize = 16.sp) }
+            ) { Text("Prácticas ", fontSize = 16.sp) }
 
             // 4. SELECCIONAR NIVEL (Nuevo botón)
             Button(

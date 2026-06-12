@@ -1,6 +1,5 @@
 package com.jasc.jasc_chess.menu
 
-
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -10,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
+
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,9 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.jasc.jasc_chess.data.PreferencesManager
 import com.jasc.jasc_chess.game.BoardViewModel
-
+import com.jasc.jasc_chess.data.local.PreferencesManager
+import com.jasc.jasc_chess.data.local.NivelRepository // <--- ESTO FALTA
 @Composable
 fun SelectorNivelesScreen(navController: NavController, viewModel: BoardViewModel) {
     val context = LocalContext.current
@@ -39,7 +39,8 @@ fun SelectorNivelesScreen(navController: NavController, viewModel: BoardViewMode
                 Spacer(modifier = Modifier.height(30.dp))
             }
 
-            items(16) { index ->
+// CAMBIO EN LA LÍNEA 27:
+            items(NivelRepository.totalNiveles.size) { index ->
                 val nivel = index + 1
                 val estaDesbloqueado = nivel <= nivelMaximo.value
                 val estaCompletado = nivel < nivelMaximo.value
@@ -64,7 +65,8 @@ fun SelectorNivelesScreen(navController: NavController, viewModel: BoardViewMode
                     }
                 )
 
-                if (nivel < 16) {
+// CAMBIO EN LA LÍNEA 48:
+                if (nivel < NivelRepository.totalNiveles.size) {
                     Box(modifier = Modifier.height(40.dp).width(4.dp).background(if (estaCompletado) Color.Yellow else Color.Gray.copy(alpha = 0.3f)))
                 }
             }
@@ -80,42 +82,38 @@ fun NivelNode(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier.padding(vertical = 8.dp)) {
         Surface(
             modifier = Modifier
-                .size(70.dp)
+                .size(75.dp)
                 .clip(CircleShape)
                 .clickable(enabled = estaDesbloqueado) { onClick() },
             color = when {
-                estaCompletado -> Color(0xFFF59E0B)
-                estaDesbloqueado -> Color(0xFF6D28D9)
-                else -> Color(0xFF334155)
+                estaCompletado -> Color(0xFF10B981) // Verde para completado
+                estaDesbloqueado -> Color(0xFF6D28D9) // Morado para activo
+                else -> Color(0xFF334155) // Gris para bloqueado
             },
-            border = if (estaDesbloqueado) BorderStroke(4.dp, Color.White.copy(alpha = 0.5f)) else null
+            border = if (estaDesbloqueado) BorderStroke(3.dp, Color.White) else null
         ) {
             Box(contentAlignment = Alignment.Center) {
                 if (estaDesbloqueado) {
                     Text(
                         text = if (estaCompletado) "✓" else nivel.toString(),
                         color = Color.White,
-                        fontSize = 22.sp,
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.Bold
                     )
                 } else {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.5f),
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Icon(Icons.Default.Lock, contentDescription = "Bloqueado", tint = Color.Gray)
                 }
             }
         }
         Text(
             text = "ETAPA $nivel",
             color = if (estaDesbloqueado) Color.White else Color.Gray,
-            fontSize = 10.sp,
-            modifier = Modifier.padding(top = 4.dp)
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 6.dp)
         )
     }
 }

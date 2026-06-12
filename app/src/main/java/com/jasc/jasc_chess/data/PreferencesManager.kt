@@ -1,40 +1,31 @@
-package com.jasc.jasc_chess.data
+package com.jasc.jasc_chess.data.local
 
 import android.content.Context
-
+import android.util.Log
 object PreferencesManager {
-
     private const val PREFS_NAME = "JascChessPrefs"
     private const val KEY_NIVEL_MAXIMO = "nivel_maximo"
+    private const val KEY_PUNTOS = "puntos_totales"
 
-    /**
-     * Guarda el nivel máximo alcanzado.
-     * Solo actualiza si el nuevo nivel es mayor al guardado anteriormente.
-     */
     fun guardarNivelMaximo(nivel: Int, context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val actual = prefs.getInt(KEY_NIVEL_MAXIMO, 1)
-
-        if (nivel > actual) {
+        if (nivel > prefs.getInt(KEY_NIVEL_MAXIMO, 1)) {
             prefs.edit().putInt(KEY_NIVEL_MAXIMO, nivel).apply()
         }
     }
 
-    /**
-     * Obtiene el nivel máximo desbloqueado por el jugador.
-     * Por defecto retorna 1 (el primer nivel).
-     */
     fun obtenerNivelMaximo(context: Context): Int {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getInt(KEY_NIVEL_MAXIMO, 1)
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_NIVEL_MAXIMO, 1)
     }
 
-    /**
-     * Opcional: Útil para la función de "Reiniciar progreso"
-     */
-    fun resetearProgreso(context: Context) {
+    fun guardarPuntos(puntosNuevos: Int, context: Context) {
+        Log.d("JascChess", "Guardando $puntosNuevos puntos...") // <--- ESTO
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putInt(KEY_NIVEL_MAXIMO, 1).apply()
+        val actuales = obtenerPuntos(context)
+        prefs.edit().putInt(KEY_PUNTOS, actuales + puntosNuevos).apply()
+    }
+
+    fun obtenerPuntos(context: Context): Int {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_PUNTOS, 0)
     }
 }
-

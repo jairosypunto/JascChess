@@ -1,14 +1,14 @@
 package com.jasc.jasc_chess.game
 
-import androidx.lifecycle.viewmodel.compose.viewModel
 import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,31 +16,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale // <-- SOLUCIONA ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource // <-- SOLUCIONA painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextAlign // <-- SOLUCIONA TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
+
+// Importaciones de tus componentes locales
 import com.jasc.jasc_chess.R
 import com.jasc.jasc_chess.model.*
-import com.jasc.jasc_chess.ui.components.TimerComponent
-import com.jasc.jasc_chess.ui.components.ChessPieceView
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.foundation.clickable
-import androidx.compose.material.ripple.rememberRipple
-import androidx.compose.material3.ripple
+import com.jasc.jasc_chess.ui.components.TimerComponent // <-- SOLUCIONA TimerComponent
+import com.jasc.jasc_chess.ui.components.ChessPieceView // <-- SOLUCIONA ChessPieceView
 import com.jasc.jasc_chess.audio.SoundManager
 @Composable
-fun GameScreen(viewModel: BoardViewModel = viewModel()) {
+fun GameScreen(
+    viewModel: BoardViewModel,
+    navController: NavController
+) {
     val gameState by viewModel.gameState.collectAsState()
     val scrollState = rememberScrollState()
-
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? -> imageUri = uri }
+    val context = LocalContext.current
 
     val temas = listOf(
         Pair(Color(0xFFF8FAFC), Color(0xFF1E3A8A)), Pair(Color(0xFFE5C185), Color(0xFF4A2E1B)),
@@ -60,9 +59,8 @@ fun GameScreen(viewModel: BoardViewModel = viewModel()) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Perfil
-                Surface(modifier = Modifier.padding(top = 12.dp, bottom = 20.dp).size(60.dp).clip(CircleShape).border(2.dp, Color(0xFFFFD700), CircleShape).clickable { launcher.launch("image/*") }, color = Color(0xFF1E293B)) {
-                    if (imageUri != null) AsyncImage(model = imageUri, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                    else Box(contentAlignment = Alignment.Center) { Text("👤", fontSize = 28.sp) }
+                Surface(modifier = Modifier.padding(top = 12.dp, bottom = 20.dp).size(60.dp).clip(CircleShape).border(2.dp, Color(0xFFFFD700), CircleShape), color = Color(0xFF1E293B)) {
+                    Box(contentAlignment = Alignment.Center) { Text("👤", fontSize = 28.sp) }
                 }
 
                 // Info partida
@@ -77,54 +75,28 @@ fun GameScreen(viewModel: BoardViewModel = viewModel()) {
                     Text(text = if (gameState.currentTurn == PieceColor.ORO) "TURNO: IMPERIO 👑" else "TURNO: IA PLATA ⚔️", color = if (gameState.currentTurn == PieceColor.ORO) Color(0xFFF59E0B) else Color(0xFF38BDF8), fontSize = 13.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(vertical = 12.dp))
                 }
 
-
                 CementerioRow("IMPERIO (ORO): ", gameState.piezasComidasOro, gameState)
 
-// ... (Código superior previo)
-
-// Tablero
-                Box(
-                    modifier = Modifier
-                        .padding(horizontal = 1.dp, vertical = 1.dp)
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
-                        .shadow(20.dp, RoundedCornerShape(6.dp))
-                        .background(Color(0xFF4A2E1B))
-                        .border(4.dp, Color(0xFF2D1B10), RoundedCornerShape(6.dp))
-                        .padding(start = 4.dp, end = 4.dp, bottom = 4.dp, top = 12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
+                // Tablero
+                Box(modifier = Modifier.padding(horizontal = 1.dp, vertical = 1.dp).fillMaxWidth().aspectRatio(1f).shadow(20.dp, RoundedCornerShape(6.dp)).background(Color(0xFF4A2E1B)).border(4.dp, Color(0xFF2D1B10), RoundedCornerShape(6.dp)).padding(start = 4.dp, end = 4.dp, bottom = 4.dp, top = 12.dp), contentAlignment = Alignment.Center) {
                     Row(modifier = Modifier.fillMaxSize()) {
-                        // Números laterales
                         Column(modifier = Modifier.fillMaxHeight().width(12.dp).padding(vertical = 4.dp), verticalArrangement = Arrangement.SpaceAround, horizontalAlignment = Alignment.CenterHorizontally) {
                             for (i in gameState.boardSize downTo 1) Text(text = i.toString(), color = Color(0xFFE2E8F0), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
-
-                        // Matriz de casillas - CORREGIDO: Sin doble bucle anidado
                         Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
                             for (row in 0 until gameState.boardSize) {
                                 Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
                                     for (col in 0 until gameState.boardSize) {
                                         val currentPos = Position(row, col)
-                                        CasillaView(
-                                            position = currentPos,
-                                            gameState = gameState,
-                                            colores = colores,
-                                            modoEdicion = gameState.isEditingMode,
-                                            onClick = {
-                                                if (gameState.isEditingMode) {
-                                                    viewModel.manejarEdicionTablero(currentPos)
-                                                } else {
-                                                    if (gameState.selectedPosition == currentPos) viewModel.onCellSelected(null)
-                                                    else if (gameState.modoJuego == GameMode.PUZZLE && gameState.selectedPosition != null) viewModel.validarJugadaPuzzle(gameState.selectedPosition!!, currentPos)
-                                                    else viewModel.onCellSelected(currentPos)
-                                                }
-                                            }
-                                        )
+                                        CasillaView(currentPos, gameState, colores, gameState.isEditingMode) {
+                                            if (gameState.isEditingMode) viewModel.manejarEdicionTablero(currentPos)
+                                            else if (gameState.selectedPosition == currentPos) viewModel.onCellSelected(null)
+                                            else if (gameState.modoJuego == GameMode.PUZZLE && gameState.selectedPosition != null) viewModel.validarJugadaPuzzle(gameState.selectedPosition!!, currentPos)
+                                            else viewModel.onCellSelected(currentPos)
+                                        }
                                     }
                                 }
                             }
-                            // Letras inferiores
                             Row(modifier = Modifier.fillMaxWidth().height(18.dp).padding(bottom = 2.dp), horizontalArrangement = Arrangement.SpaceAround) {
                                 listOf("a", "b", "c", "d", "e", "f", "g", "h").take(gameState.boardSize).forEach {
                                     Text(text = it, color = Color(0xFFE2E8F0), fontSize = 10.sp, fontWeight = FontWeight.Black)
@@ -136,187 +108,90 @@ fun GameScreen(viewModel: BoardViewModel = viewModel()) {
 
                 CementerioRow("IA (PLATA): ", gameState.piezasComidasPlata, gameState)
 
-// ... (Resto del código hasta el final)
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // Solo mostramos el nivel si estamos en modo puzzle
-                    if (gameState.modoJuego == GameMode.PUZZLE) {
-                        Text(
-                            text = "AVANCE ACTUAL: NIVEL ${gameState.nivelActualInt}",
-                            color = Color.White.copy(alpha = 0.6f),
-                            fontSize = 10.sp,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
-                    }
-
-                    val esTablero4x4 = gameState.boardSize == 4
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        val esTablero4x4 = gameState.boardSize == 4
-
-                        OutlinedButton(
-                            onClick = {
-                                val nuevoSize = if (esTablero4x4) 8 else 4
-                                viewModel.iniciarModoLibre(nuevoSize)
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = if (esTablero4x4) Color(0xFF10B981) else Color(0xFF38BDF8)
-                            )
-                        ) {
-                            Text(text = if (esTablero4x4) "JUGAR AJEDREZ (8x8)" else "JUGAR 4X4")
-                        }
-                    }
-                }
-
-
-                // FILA DE BOTONES CIRCULARES (RECUPERADOS)
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
+                // Fila botones
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                     BotonCircularMedieval({ viewModel.reiniciarSegunModo() }, "🔄", "REINICIAR", Color(0xFFB45309))
                     BotonCircularMedieval({ viewModel.cambiarDificultad() }, "🏆", "NIVEL", Color(0xFF6D28D9))
                     BotonCircularMedieval({ viewModel.cambiarEstiloFichas() }, "♟️", "PIEZAS", Color(0xFF1E3A8A))
-                    BotonCircularMedieval({ viewModel.deshacerJugada() }, "↩️", "DESHACER", Color(0xFF78350F))
+                    BotonCircularMedieval({ viewModel.reiniciarTodoElProgreso() }, "💣", "RESET", Color.Red)
                     BotonCircularMedieval({ viewModel.obtenerPistaAyuda() }, "💡", "PISTA", Color(0xFFD97706))
                     BotonCircularMedieval({ viewModel.cambiarTema() }, "🎨", "TEMA", Color(0xFFD93306))
+                    BotonCircularMedieval({ viewModel.deshacerJugada() }, "↩️", "DESHACER", Color(0xFF57534E))
                 }
 
-                // Panel modo edición
+// BLOQUE DE EDICIÓN CORREGIDO CON BOTÓN DE CIERRE
                 if (gameState.isEditingMode) {
-                    Column(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(8.dp)
-                            .background(Color(0xFF1E293B), RoundedCornerShape(12.dp))
-                            .padding(8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // --- FILA SUPERIOR: TÍTULO Y BOTÓN DE CIERRE ---
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFF1E293B), RoundedCornerShape(12.dp))
+                                .padding(16.dp), // Aumenté el padding interno para que se vea mejor
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // Espaciador para centrar el título
-                            Spacer(modifier = Modifier.width(48.dp))
+                            PanelEdicion(viewModel = viewModel)
+
+                            Spacer(modifier = Modifier.height(15.dp))
 
                             Button(
-                                onClick = { },
-                                enabled = false,
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6D28D9))
+                                onClick = { viewModel.finalizarYGuardarNivel() },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)) // Color dorado/naranja para guardar
                             ) {
-                                Text("MODO EDICIÓN", color = Color.White)
-                            }
-
-                            // Botón de Cierre (La "X")
-                            IconButton(onClick = { viewModel.cerrarModoEdicion() }) {
-                                Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.White)
+                                Text("GUARDAR NIVEL", fontWeight = FontWeight.Bold)
                             }
                         }
 
-                        // Panel de selección de piezas
-                        PanelEdicion(viewModel)
-
-                        // Botón Guardar
-                        Button(
-                            onClick = { viewModel.finalizarYGuardarNivel() },
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-                        ) { Text("GUARDAR NIVEL Y AVANZAR") }
-
-                        // Botón Generar
-                        Button(
-                            onClick = {
-                                Log.e("DEBUG_BOTON", "Clic capturado en la UI")
-                                viewModel.generarCodigoDeNivel()
-                            },
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706))
-                        ) { Text("Generar Código de Nivel (Logcat)", color = Color.White) }
+                        // BOTÓN "X" PARA CERRAR
+                        IconButton(
+                            onClick = { viewModel.cerrarModoEdicion() },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd) // Lo posiciona en la esquina superior derecha
+                                .padding(4.dp)
+                        ) {
+                            Text("✕", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
 
                 FooterFirma(viewModel)
             }
 
-            // 1. VICTORIA DE PUZZLE
-            if (gameState.puzzleResuelto) {
-// En GameScreen.kt, dentro del VictoryOverlay
+// --- VICTORIA ---
+            if (gameState.esJaqueMate && !gameState.estaCargandoNivel) {
                 VictoryOverlay(
                     message = gameState.mensajeFinal ?: "¡Puzzle Completado!",
-                    onDismiss = {
-                        // AQUÍ ES DONDE DEBE OCURRIR LA MAGIA
-                        viewModel.reiniciarTodoElProgreso() // Esto llamará a cambiarNivel(1)
-                        // O si quieres que vuelva al menú:
-                        // navController.popBackStack()
-                    }
+                    viewModel = viewModel,
+                    onDismiss = { navController.popBackStack() }
                 )
             }
-// 2. FIN DE PARTIDA
-            else if (gameState.esJaqueMate || gameState.esTablas || gameState.esAhogado) {
 
-                // --- NUEVO: Dispara sonido solo si es Jaque Mate ---
-                LaunchedEffect(gameState.esJaqueMate) {
-                    if (gameState.esJaqueMate) {
-                        SoundManager.play(R.raw.mate) // Asegúrate que este sea el sonido del mate
-                    }
-                }
-
-                Box(modifier = Modifier.fillMaxSize().padding(top = 100.dp), contentAlignment = Alignment.TopCenter) {
+            // --- AVISO DE ERROR (Colócalo aquí abajo) ---
+            if (gameState.mensajeError != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     Surface(
-                        color = Color.Black.copy(alpha = 0.6f),
-                        shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(2.dp, Color.Yellow.copy(alpha = 0.5f)),
-                        modifier = Modifier.padding(16.dp).wrapContentSize()
+                        color = Color.Red.copy(alpha = 0.9f),
+                        shape = RoundedCornerShape(8.dp),
+                        shadowElevation = 8.dp
                     ) {
-                        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = when {
-                                    gameState.esJaqueMate -> "¡JAQUE MATE!"
-                                    gameState.esTablas -> "TABLAS"
-                                    else -> "FIN DE PARTIDA"
-                                },
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                            Button(
-                                onClick = {
-                                    if (gameState.modoJuego == GameMode.LIBRE) viewModel.reiniciarPartidaLibre()
-                                    else viewModel.reiniciarPartida()
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB45309))
-                            ) { Text("JUGAR DE NUEVO") }
-                        }
+                        Text(
+                            text = gameState.mensajeError!!,
+                            color = Color.White,
+                            modifier = Modifier.padding(16.dp),
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
-// 3. Bloqueo por límite de jugadas
-            else if (gameState.esJuegoBloqueado && !gameState.esJaqueMate && !gameState.esAhogado) {
-                Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.8f)), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = "¡LÍMITE DE JUGADAS!", color = Color.Red, fontSize = 32.sp, fontWeight = FontWeight.Black)
-                        Text(text = "Reiniciando nivel...", color = Color.White, fontSize = 18.sp)
-                    }
-                }
-            }
-            // 4. Aviso flotante de JAQUE
-            else if (gameState.esJaque) {
-                Box(modifier = Modifier.fillMaxSize().padding(top = 150.dp), contentAlignment = Alignment.TopCenter) {
-                    Surface(color = Color.Red.copy(alpha = 0.9f), shape = RoundedCornerShape(50), shadowElevation = 8.dp) {
-                        Text(text = "¡JAQUE AL REY!", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
-                    }
-                }
-            }
-            // AQUÍ BORRAMOS EL BOX VACÍO COMPLETAMENTE
-        } // Esta llave cierra la Column (la principal)
+        }
     }
 }
 
@@ -389,16 +264,21 @@ fun CementerioRow(label: String, piezas: List<ChessPiece>, gameState: GameState)
     }
 }
 @Composable
-fun VictoryOverlay(message: String, onDismiss: () -> Unit) {
-    // Fondo semitransparente que cubre toda la pantalla
-    // ESTO DISPARA EL SONIDO UNA SOLA VEZ AL APARECER
+fun VictoryOverlay(
+    message: String,
+    viewModel: BoardViewModel,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+
     LaunchedEffect(Unit) {
         SoundManager.play(R.raw.victoria)
     }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.85f)), // Un poco más oscuro para que resalte el mensaje
+            .background(Color.Black.copy(alpha = 0.85f)),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -411,31 +291,31 @@ fun VictoryOverlay(message: String, onDismiss: () -> Unit) {
                 fontSize = 40.sp,
                 fontWeight = FontWeight.Bold
             )
-
-            Spacer(modifier = Modifier.height(16.dp)) // Espacio entre título y mensaje
-
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = message,
                 color = Color.White,
                 fontSize = 20.sp,
                 textAlign = TextAlign.Center
             )
+            Spacer(modifier = Modifier.height(32.dp))
 
-            Spacer(modifier = Modifier.height(32.dp)) // Espacio entre mensaje y botón
-            val viewModel: BoardViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
             Button(
                 onClick = {
-                    viewModel.reiniciarTodoElProgreso()
+                    // 1. Ejecutamos la función que guarda nivel y avanza
+                    viewModel.avanzarAlSiguienteNivel(context)
+                    // 2. Cerramos el overlay
                     onDismiss()
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B)),
                 modifier = Modifier.fillMaxWidth(0.6f)
             ) {
-                Text("Volver al Inicio", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Continuar Camino", color = Color.White, fontWeight = FontWeight.Bold)
             }
         }
     }
 }
+
 @Composable
 fun FooterFirma(viewModel: BoardViewModel) {
     var mostrarDialogoClave by remember { mutableStateOf(false) }

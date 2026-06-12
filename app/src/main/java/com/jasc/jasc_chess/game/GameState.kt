@@ -46,12 +46,16 @@ data class GameState(
     val piezasComidasPlata: List<ChessPiece> = emptyList(),
     val esJaque: Boolean = false,
     val esJaqueMate: Boolean = false,
+    val victoriaMostrada: Boolean = false, // <--- AÑADE ESTO
+    val estaCargandoNivel: Boolean = false, // <--- AÑADE ESTA LÍNEA
     val esTablas: Boolean = false,
     val esAhogado: Boolean = false,
     val ganador: PieceColor? = null,
     val puzzleResuelto: Boolean = false, // Útil para mostrar la pantalla de "¡Bien hecho!"
     val mensajeFinal: String? = null,
+    val mensajeError: String? = null,
     val esJuegoBloqueado: Boolean = false,
+    val puntosTotales: Int = 0,
     // --- CONFIGURACIÓN ---
     val nivelActual: NivelDificultad = NivelDificultad.PRINCIPIANTE
 )

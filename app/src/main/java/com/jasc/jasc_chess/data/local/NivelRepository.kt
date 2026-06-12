@@ -13,14 +13,21 @@ data class NivelConfig(
 object NivelRepository {
 
     val totalNiveles = mutableMapOf<Int, NivelConfig>(
-        1 to NivelConfig(1, 4, listOf(
-            ChessPiece("p_1_2_1780876623237", PieceType.PEON, PieceColor.PLATA, Position(1, 2)),
-            ChessPiece("p_2_1_1780876625924", PieceType.ALFIL, PieceColor.PLATA, Position(2, 1)),
-            ChessPiece("p_3_2_1780876633828", PieceType.CABALLO, PieceColor.ORO, Position(3, 2)),
-            ChessPiece("p_3_1_1780876641967", PieceType.REINA, PieceColor.ORO, Position(3, 1)),
-            ChessPiece("p_0_3_1780876660724", PieceType.TORRE, PieceColor.PLATA, Position(0, 3)),
-            ChessPiece("p_0_2_1780876668438", PieceType.REY, PieceColor.PLATA, Position(0, 2))
+
+        1 to NivelConfig(1, 6, listOf(
+            ChessPiece("n1_caballo_plata", PieceType.CABALLO, PieceColor.PLATA, Position(0, 0)),
+            ChessPiece("n2_alfil_plata", PieceType.ALFIL, PieceColor.PLATA, Position(0, 1)),
+            ChessPiece("n3_peon_plata", PieceType.PEON, PieceColor.PLATA, Position(1, 0)),
+            ChessPiece("n4_peon_plata", PieceType.PEON, PieceColor.PLATA, Position(1, 1)),
+            ChessPiece("n5_rey_plata", PieceType.REY, PieceColor.PLATA, Position(2, 2)),
+            ChessPiece("n6_peon_plata", PieceType.PEON, PieceColor.PLATA, Position(3, 3)),
+            ChessPiece("n1_peon_oro", PieceType.PEON, PieceColor.ORO, Position(3, 2)),
+            ChessPiece("n2_alfil_oro", PieceType.ALFIL, PieceColor.ORO, Position(3, 0)),
+            ChessPiece("n3_caballo_oro", PieceType.CABALLO, PieceColor.ORO, Position(5, 1)),
+            ChessPiece("n4_alfil_oro", PieceType.ALFIL, PieceColor.ORO, Position(4, 4)),
+            ChessPiece("n5_reina_oro", PieceType.REINA, PieceColor.ORO, Position(3, 5)),
         ), PieceColor.ORO),
+
 
         2 to NivelConfig(2, 4, listOf(
             ChessPiece("p_0_3_1780877020212", PieceType.REY, PieceColor.PLATA, Position(0, 3)),
@@ -138,7 +145,7 @@ object NivelRepository {
             ChessPiece("n1_p1", PieceType.PEON, PieceColor.PLATA, Position(1, 3)),
             ChessPiece("n2_t2", PieceType.TORRE, PieceColor.PLATA, Position(0, 4)),
             ChessPiece("n2_q", PieceType.REINA, PieceColor.ORO, Position(4, 3)),
-            ChessPiece("n1_c_oro", PieceType.CABALLO, PieceColor.ORO, Position(3, 3)),
+            ChessPiece("n1_c_oro", PieceType.CABALLO, PieceColor.ORO, Position(3, 3))
 
             ), PieceColor.ORO),
 
@@ -181,7 +188,15 @@ object NivelRepository {
             ChessPiece("p_1_2_1780980694917", PieceType.PEON, PieceColor.PLATA, Position(1, 2)),
             ChessPiece("p_3_0_1780980702060", PieceType.REINA, PieceColor.ORO, Position(3, 0)),
             ChessPiece("p_3_3_1780980708475", PieceType.TORRE, PieceColor.ORO, Position(3, 3)),
-            ChessPiece("p_3_4_1780980711305", PieceType.ALFIL, PieceColor.ORO, Position(3, 4)),
+            ChessPiece("p_3_4_1780980711305", PieceType.ALFIL, PieceColor.ORO, Position(3, 4))
+        ), PieceColor.ORO),
+        17 to NivelConfig(17, 4, listOf(
+            ChessPiece("p_1_2_1780876623237", PieceType.PEON, PieceColor.PLATA, Position(1, 2)),
+            ChessPiece("p_2_1_1780876625924", PieceType.ALFIL, PieceColor.PLATA, Position(2, 1)),
+            ChessPiece("p_3_2_1780876633828", PieceType.CABALLO, PieceColor.ORO, Position(3, 2)),
+            ChessPiece("p_3_1_1780876641967", PieceType.REINA, PieceColor.ORO, Position(3, 1)),
+            ChessPiece("p_0_3_1780876660724", PieceType.TORRE, PieceColor.PLATA, Position(0, 3)),
+            ChessPiece("p_0_2_1780876668438", PieceType.REY, PieceColor.PLATA, Position(0, 2))
         ), PieceColor.ORO),
 
     )
