@@ -1,41 +1,34 @@
 package com.jasc.jasc_chess.game
 
 import android.content.Context
-import com.jasc.jasc_chess.data.local.PreferencesManager
+import android.util.Log
+import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.compose.runtime.*
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import com.jasc.jasc_chess.model.*
-import com.jasc.jasc_chess.data.engine.MoveValidator
-import com.jasc.jasc_chess.data.engine.AIEngine
-// Asegúrate de añadir este import en BoardViewModel.kt
-import com.jasc.jasc_chess.data.engine.FENParser
-import com.jasc.jasc_chess.model.ChessPuzzle
-import com.jasc.jasc_chess.model.Move // Basado en tu archivo Move.kt
-import android.util.Log
-import com.jasc.jasc_chess.data.local.NivelRepository
-// En BoardViewModel.kt, añade esto en la sección de imports:
-import com.jasc.jasc_chess.data.local.NivelConfig
-import com.jasc.jasc_chess.audio.SoundManager // <--- ESTO ES LO QUE FALTA PARA EL ERROR DE "Unresolved reference 'SoundManager'"
 import com.jasc.jasc_chess.R
+import com.jasc.jasc_chess.audio.SoundManager
+import com.jasc.jasc_chess.data.engine.*
+import com.jasc.jasc_chess.data.local.*
+import com.jasc.jasc_chess.model.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 class BoardViewModel : ViewModel() {
     private val _gameState = MutableStateFlow(GameState())
     val gameState: StateFlow<GameState> = _gameState.asStateFlow()
 
     // --- CORRECCIÓN EN EL INICIALIZADOR ---
     init {
-        configurarPartida(8, GameMode.LIBRE)
+        // Solo configuramos el 8x8 si el estado aún no tiene piezas (es decir, está vacío al iniciar)
+        if (_gameState.value.pieces.isEmpty()) {
+            configurarPartida(8, GameMode.LIBRE)
+        }
         iniciarTemporizadorReloj()
     }
 
     // 1. Esta función es la que llamas desde el SelectorNivelesScreen
     fun cargarPartida(nivelId: Int) {
+        indicePistaActual = 0
         val config = NivelRepository.totalNiveles[nivelId]
 
         if (config != null) {
@@ -47,7 +40,10 @@ class BoardViewModel : ViewModel() {
                 currentTurn = config.turnoInicial,
                 boardSize = config.size,
 
-                // --- ESTAS TRES LÍNEAS MATAN EL LETRERO ---
+                // --- AQUÍ ESTÁ LA CORRECCIÓN ---
+                // Leemos los pasos reales del repositorio o ponemos 4 si es nulo
+                maxPasosConfigurado = config.maxPasos,
+
                 mensajeError = null,
                 esJuegoBloqueado = false,
                 puzzleStepIndex = 0
@@ -59,6 +55,62 @@ class BoardViewModel : ViewModel() {
         vaciarTablero()
         // Activamos modo edición dentro del flujo de estado
         _gameState.update { it.copy(isEditingMode = true) }
+    }
+    private var indicePistaActual = 0
+
+    fun cerrarDialogoAcertijo() {
+        _gameState.update {
+            it.copy(
+                dialogoAcertijoVisible = false, // Solo ocultamos la ventana
+                mensajeError = null
+            )
+        }
+    }
+
+    fun obtenerPistaAyuda() {
+        val nivelActual = NivelRepository.obtenerNivel(_gameState.value.nivelActualInt) ?: return
+
+        // 1. Si ya hay bloqueo activo, solo mostramos el diálogo
+        if (_gameState.value.pistaBloqueada) {
+            _gameState.update { it.copy(dialogoAcertijoVisible = true) }
+            return
+        }
+
+        // 2. Si NO hay bloqueo, verificamos si aún hay pistas disponibles
+        if (indicePistaActual < nivelActual.secuenciaSolucion.size) {
+
+            // CORRECCIÓN AQUÍ:
+            // No pintamos la pista todavía. Primero activamos el bloqueo y el diálogo.
+            // El usuario DEBE validar el acertijo para que la pista se pinte.
+            _gameState.update {
+                it.copy(
+                    pistaBloqueada = true,
+                    dialogoAcertijoVisible = true,
+                    acertijoActual = nivelActual.acertijo
+                )
+            }
+        }
+    }
+
+    fun verificarRespuestaAcertijo(respuesta: String) {
+        val nivelActual = NivelRepository.obtenerNivel(_gameState.value.nivelActualInt) ?: return
+
+        if (respuesta.trim().equals(nivelActual.respuestaAcertijo, ignoreCase = true)) {
+            // Obtenemos la pista que estaba pendiente
+            val movimiento = nivelActual.secuenciaSolucion[indicePistaActual]
+            indicePistaActual++ // Avanzamos el índice aquí, al acertar
+
+            _gameState.update {
+                it.copy(
+                    pistaBloqueada = false,
+                    dialogoAcertijoVisible = false,
+                    casillaPista = movimiento.desde, // PINTA LA PISTA AQUÍ
+                    mensajeError = null
+                )
+            }
+        } else {
+            _gameState.update { it.copy(mensajeError = "Incorrecto, intenta de nuevo.") }
+        }
     }
 
     fun obtenerMensajeDeRecompensa(puntos: Int): String? {
@@ -159,8 +211,14 @@ class BoardViewModel : ViewModel() {
     }
 
     private fun crearPieza(seleccion: Pair<PieceType, PieceColor>, pos: Position): ChessPiece {
+        // Generamos un ID legible: tipo_color_fila_columna
+        // Ejemplo: "peon_oro_2_0"
+        val tipo = seleccion.first.name.lowercase()
+        val color = seleccion.second.name.lowercase()
+        val idLimpio = "${tipo}_${color}_${pos.row}_${pos.col}"
+
         return ChessPiece(
-            id = "p_${pos.row}_${pos.col}_${System.currentTimeMillis()}",
+            id = idLimpio, // Usamos el ID limpio sin currentTimeMillis()
             type = seleccion.first,
             color = seleccion.second,
             position = pos
@@ -193,10 +251,30 @@ class BoardViewModel : ViewModel() {
         }
     }
 
+    // --- En tu BoardViewModel ---
     fun reiniciarPartida() {
-        val nivelActual = _gameState.value.nivelActualInt
-        Log.d("DEBUG_NIVEL", "Reinciando nivel: $nivelActual")
-        cambiarNivel(nivelActual)
+        val state = _gameState.value
+        val config = NivelRepository.obtenerNivel(state.nivelActualInt)
+
+        _gameState.update { it.copy(
+            pieces = config?.piezas ?: emptyList(),
+            puzzleStepIndex = 0,
+            esJuegoBloqueado = false,
+            mensajeError = null,
+
+            // --- ESTO ES LO QUE TE FALTA ---
+            // Al poner esto en false, la condición del 'if' en la UI falla
+            // y el AlertDialog se destruye automáticamente.
+            esAhogado = false,
+            esTablas = false,
+            esJaqueMate = false,
+            // -------------------------------
+
+            currentTurn = config?.turnoInicial ?: PieceColor.ORO,
+            selectedPosition = null,
+            validMoves = emptyList()
+        )}
+        Log.d("JASC_REINICIO", "Nivel ${state.nivelActualInt} reiniciado correctamente.")
     }
 
     fun onCellSelected(pos: Position?) { // Cambiado a Position?
@@ -269,36 +347,6 @@ class BoardViewModel : ViewModel() {
         }
     }
 
-    fun iniciarModoLibre(size: Int) {
-        // Si es 8x8, forzamos un setup estándar. Si es 4x4, el que tengas en el Repository.
-        val piezasNuevas = if (size == 8) {
-            generarSetupEstandar8x8()
-        } else {
-            NivelRepository.generarSetupPorDefecto(size)
-        }
-
-        _gameState.update { currentState ->
-            currentState.copy(
-                boardSize = size,
-                modoJuego = GameMode.LIBRE,
-                pieces = piezasNuevas,
-                currentPuzzle = null,
-                nivelActualInt = 0,
-                currentTurn = PieceColor.ORO,
-                selectedPosition = null,
-                validMoves = emptyList(),
-                esJaqueMate = false,
-                esTablas = false,
-                esJaque = false,
-                esAhogado = false,
-                piezasComidasOro = emptyList(),
-                piezasComidasPlata = emptyList(),
-                historialTableros = listOf(piezasNuevas),
-                esJuegoBloqueado = false
-            )
-        }
-    }
-
     private fun generarSetupEstandar8x8(): List<ChessPiece> {
         val piezas = mutableListOf<ChessPiece>()
 
@@ -352,64 +400,6 @@ class BoardViewModel : ViewModel() {
             } else {
                 // Si toca una casilla distinta a las válidas, deselecciona
                 _gameState.update { it.copy(selectedPosition = null, validMoves = emptyList()) }
-            }
-        }
-    }
-
-    fun validarJugadaPuzzle(origen: Position, destino: Position) {
-        val state = _gameState.value
-
-        // Si ya está bloqueado, no hacemos nada más
-        if (state.esJuegoBloqueado) return
-
-        val movimiento = state.validMoves.find { it.to == destino } ?: return
-        val piezasDespues = realizarDesplazamiento(state.pieces, origen, destino)
-        val nuevoStep = state.puzzleStepIndex + 1
-
-        // Evaluamos el estado final después del movimiento
-        evaluarEstadoFinal(piezasDespues, PieceColor.PLATA)
-        val estadoPost = _gameState.value
-
-        // --- A. VICTORIA ---
-        if (estadoPost.esJaqueMate) {
-            _gameState.update { it.copy(
-                pieces = piezasDespues,
-                puzzleResuelto = true,
-                mensajeFinal = "¡Nivel ${state.nivelActualInt} Superado!",
-                mensajeError = null
-            )}
-        }
-        // --- B. FALLO (Bloqueo) ---
-        // SOLO fallamos si ya completamos los 2 pasos permitidos y NO es mate
-        else if (nuevoStep >= 2 && state.puzzleStepIndex >= 1) {
-            _gameState.update { it.copy(
-                esJuegoBloqueado = true,
-                mensajeError = "¡Intenta Mate en 2!"
-            )}
-
-            // Lanzamos el reseteo automático
-            viewModelScope.launch {
-                delay(2000)
-                // IMPORTANTE: Esto limpia el bloqueo y reinicia el estado
-                cargarPartida(state.nivelActualInt)
-            }
-        }
-        // --- C. CONTINUAR ---
-        else {
-            _gameState.update { it.copy(
-                pieces = piezasDespues,
-                puzzleStepIndex = nuevoStep,
-                selectedPosition = null,
-                validMoves = emptyList()
-            )}
-
-            // Si es el primer movimiento, dejamos que la IA juegue
-            if (nuevoStep == 1) {
-                viewModelScope.launch {
-                    delay(600)
-                    if (state.currentPuzzle != null) ejecutarRespuestaIA(state.currentPuzzle)
-                    else ejecutarTurnoIA()
-                }
             }
         }
     }
@@ -489,22 +479,17 @@ class BoardViewModel : ViewModel() {
     }
     fun cambiarTema() { _gameState.update { it.copy(temaActual = (it.temaActual + 1) % 8) } }
     private fun cambiarNivel(n: Int) {
-        // 1. Intentamos obtener la config del repositorio
         val config = NivelRepository.obtenerNivel(n)
 
-        // 2. Validación defensiva: Si no existe, no hacemos un return silencioso.
-        // Esto evita que el tablero se quede en blanco.
         if (config == null) {
-            Log.e("JASC_ERROR", "Intento de cargar nivel $n que no existe en repositorio.")
+            Log.e("JASC_ERROR", "Intento de cargar nivel $n que no existe en el repositorio.")
             return
         }
 
-        // 3. Actualización de estado garantizada
         _gameState.update { currentState ->
             currentState.copy(
                 nivelActualInt = n,
                 boardSize = config.size,
-                // Usamos la lógica centralizada de piezas
                 pieces = generarPiezasParaModo(config.size, n),
                 modoJuego = GameMode.PUZZLE,
                 currentTurn = config.turnoInicial,
@@ -514,13 +499,12 @@ class BoardViewModel : ViewModel() {
                 esJuegoBloqueado = false,
                 puzzleStepIndex = 0,
                 selectedPosition = null,
-                validMoves = emptyList() // Sin <Move> (inferencia de tipos)
+                validMoves = emptyList()
             )
         }
 
-        // 4. Desbloqueo tras carga con manejo de Scope
         viewModelScope.launch {
-            delay(500) // Tiempo para que la UI procese el cambio
+            delay(500)
             _gameState.update { it.copy(estaCargandoNivel = false) }
             Log.d("JASC_DEBUG", "Nivel $n cargado y desbloqueado exitosamente.")
         }
@@ -670,8 +654,60 @@ class BoardViewModel : ViewModel() {
 
         val idx = nuevasPiezas.indexOf(piezaMovida)
         if (idx != -1) nuevasPiezas[idx] = piezaMovida.copy(position = destino)
-
+        _gameState.update { it.copy(casillaPista = null) }
         return nuevasPiezas
+    }
+
+
+    // 1. DENTRO DE TU FUNCIÓN validarJugadaPuzzle
+    fun validarJugadaPuzzle(origen: Position, destino: Position) {
+        val state = _gameState.value
+        val nivelActual = NivelRepository.obtenerNivel(state.nivelActualInt) ?: return
+
+        val piezasDespues = realizarDesplazamiento(state.pieces, origen, destino)
+        val nuevoStep = state.puzzleStepIndex + 1
+
+        _gameState.update {
+            it.copy(
+                pieces = piezasDespues,
+                puzzleStepIndex = nuevoStep,
+                currentTurn = PieceColor.PLATA,
+                selectedPosition = null,
+                validMoves = emptyList()
+            )
+        }
+
+        evaluarEstadoFinal(piezasDespues, PieceColor.PLATA)
+        val estadoPost = _gameState.value
+
+        // 1. EVALUAR VICTORIA (Jaque Mate)
+        if (estadoPost.esJaqueMate) {
+            _gameState.update { it.copy(puzzleResuelto = true, mensajeFinal = "¡Nivel ${state.nivelActualInt} Superado!") }
+        }
+        // 2. EVALUAR EMPATE (Ahogado o Tablas) - ¡ESTO ES LO QUE FALTABA INTERCEPTAR!
+        else if (estadoPost.esAhogado || estadoPost.esTablas) {
+            // No hacemos nada, dejamos que los estados se mantengan en true
+            // para que tu AlertDialog se dispare en la UI.
+            // NO llamamos a reiniciarPartida() aquí, la UI lo hará al pulsar el botón.
+        }
+        // 3. EVALUAR LÍMITE DE PASOS
+        else if (nuevoStep >= nivelActual.maxPasos) {
+            viewModelScope.launch {
+                _gameState.update {
+                    it.copy(mensajeError = "Sus ${nivelActual.maxPasos} intentos se han agotado. Reiniciando...")
+                }
+                delay(2000)
+                reiniciarPartida()
+            }
+        }
+        // 4. CONTINUAR JUEGO (IA)
+        else {
+            viewModelScope.launch {
+                delay(600)
+                if (state.currentPuzzle != null) ejecutarRespuestaIA(state.currentPuzzle)
+                else ejecutarTurnoIA()
+            }
+        }
     }
 
     fun deshacerJugada() {
@@ -714,137 +750,7 @@ class BoardViewModel : ViewModel() {
             Log.d("JASC_DEBUG", "No hay más movimientos para deshacer.")
         }
     }
-    fun obtenerPistaAyuda() {
-        _gameState.update { currentState ->
-            // Si ya hay una pista activa (casillaPista != null), la apagamos (null)
-            if (currentState.casillaPista != null) {
-                currentState.copy(casillaPista = null)
-            } else {
-                // Si no hay, calculamos la recomendación
-                val recomendacion = AIEngine.calcularMejorMovimiento(
-                    currentState.pieces,
-                    currentState.nivelActual,
-                    currentState.boardSize
-                )
-                // Asignamos la nueva posición de pista
-                currentState.copy(casillaPista = recomendacion?.second)
-            }
-        }
-    }
-    private fun ejecutarRespuestaIA(puzzle: ChessPuzzle) {
-        viewModelScope.launch {
-            delay(600)
-            val step = _gameState.value.puzzleStepIndex - 1
-            val respuestaIA = puzzle.enemyMoves.getOrNull(step) ?: return@launch
 
-            val piezaIA = _gameState.value.pieces.find { it.position == respuestaIA.from }
-            val esValido = piezaIA != null && MoveValidator.esMovimientoValido(
-                piezaIA, respuestaIA.to, _gameState.value.pieces, _gameState.value.boardSize
-            )
-
-            if (esValido) {
-                val piezasActualizadas = realizarDesplazamiento(_gameState.value.pieces, respuestaIA.from, respuestaIA.to)
-                // Usamos la función corregida
-                evaluarEstadoFinal(piezasActualizadas, PieceColor.ORO)
-            }
-        }
-    }
-
-    // Asegúrate de que esta función sea llamada donde haces el movimiento de piezas
-// 1. Función limpia, sin dependencia de Context
-    private fun evaluarEstadoFinal(piezas: List<ChessPiece>, colorTurno: PieceColor) {
-        val currentState = _gameState.value
-        if (currentState.estaCargandoNivel) return
-
-        val size = currentState.boardSize
-        val enJaque = estaElReyEnJaque(colorTurno, piezas, size)
-        val esMate = enJaque && verificarSiEsJaqueMate(colorTurno, piezas, size)
-        val esAhogado = !enJaque && esAhogado(colorTurno, piezas, size)
-        val esTablasMaterial = verificarTablasPorMaterial(piezas)
-
-        val reyDerrotado = if (esMate) piezas.find { it.type == PieceType.REY && it.color == colorTurno } else null
-
-        _gameState.update { state ->
-            state.copy(
-                pieces = if (esMate) piezas.map { if (it == reyDerrotado) it.copy(isFallen = true) else it } else piezas,
-                esJaque = enJaque,
-                esJaqueMate = esMate,
-                esJuegoBloqueado = false,
-                posicionReyDerrotado = reyDerrotado?.position,
-                esAhogado = esAhogado,
-                esTablas = esAhogado || esTablasMaterial,
-                ganador = if (esMate) (if (colorTurno == PieceColor.ORO) PieceColor.PLATA else PieceColor.ORO) else null
-            )
-        }
-
-        // --- INTEGRACIÓN DE PUNTOS Y VICTORIA ---
-        if (esMate) {
-            SoundManager.play(R.raw.victoria) // Asegúrate de tener sonido de victoria
-
-            // Aquí sumamos puntos y verificamos evento de video
-            // IMPORTANTE: Debes pasar el 'context' desde tu vista,
-            // o si prefieres, usa un método que no requiera contexto si ya guardas en memoria
-            procesarFinDeNivel(currentState.nivelActualInt)
-        } else if (enJaque) {
-            SoundManager.play(R.raw.check)
-        }
-    }
-
-// En BoardViewModel.kt
-
-    // Añade esta variable para acumular puntos en memoria durante la partida
-    private var puntosAcumuladosEnSesion = 0
-
-    // Dentro de BoardViewModel
-    private var _appContext: Context? = null // <-- AGREGA ESTA VARIABLE
-
-    fun setContext(context: Context) {
-        _appContext = context.applicationContext
-    }
-    private fun procesarFinDeNivel(nivel: Int) {
-        val context = _appContext ?: return
-
-        val puntosPorNivel = 100
-        val nuevosPuntos = _gameState.value.puntosTotales + puntosPorNivel
-
-        // 1. Guardar y actualizar puntos
-        PreferencesManager.guardarPuntos(puntosPorNivel, context)
-        _gameState.update { it.copy(puntosTotales = nuevosPuntos) }
-
-        // 2. Lógica de Video (Prioridad alta)
-        if (nivel % 10 == 0) {
-            val videoRes = when (nivel) {
-                10 -> R.raw.video_felicitacion_10
-                20 -> R.raw.video_felicitacion_20
-                else -> R.raw.video_felicitacion_default
-            }
-            _gameState.update { it.copy(videoEventoPendiente = videoRes) }
-        }
-        // 3. Lógica de Recompensa (Solo si no hubo video, para no saturar la pantalla)
-        else {
-            val mensaje = obtenerMensajeDeRecompensa(nuevosPuntos)
-            if (mensaje != null) {
-                _gameState.update { it.copy(mensajeError = mensaje) }
-
-                // Limpiar el mensaje automáticamente después de 3 segundos
-                viewModelScope.launch {
-                    delay(3000)
-                    _gameState.update { it.copy(mensajeError = null) }
-                }
-            }
-        }
-    }
-
-    // NUEVA FUNCIÓN PARA PERSISTIR (Llamada desde la UI al cerrar la partida)
-    fun guardarProgresoFinal(context: Context) {
-        PreferencesManager.guardarPuntos(puntosAcumuladosEnSesion, context)
-        puntosAcumuladosEnSesion = 0 // Reiniciamos el contador de sesión
-    }
-
-    // En BoardViewModel.kt
-    fun limpiarVideoEvento() {
-        _gameState.update { it.copy(videoEventoPendiente = null) }
-    }
     private fun ejecutarTurnoIA() {
         val estadoActual = _gameState.value
         val piezasIA = estadoActual.pieces.filter { it.color == PieceColor.PLATA }
@@ -874,6 +780,153 @@ class BoardViewModel : ViewModel() {
             evaluarEstadoFinal(estadoActual.pieces, PieceColor.ORO)
         }
     }
+
+    // 1. EJECUCIÓN DE RESPUESTA IA (ESPECÍFICA PARA PUZZLES)
+    private fun ejecutarRespuestaIA(puzzle: ChessPuzzle) {
+        viewModelScope.launch {
+            delay(600)
+
+            // Obtenemos el índice actual.
+            // Si el usuario acaba de mover y el step subió, el turno de la IA corresponde al index actual.
+            val stepActual = _gameState.value.puzzleStepIndex
+            val respuestaIA = puzzle.enemyMoves.getOrNull(stepActual)
+
+            // Si el puzzle no tiene respuesta definida para este paso, la IA pasa el turno al usuario.
+            if (respuestaIA == null) {
+                _gameState.update { it.copy(currentTurn = PieceColor.ORO) }
+                return@launch
+            }
+
+            val piezaIA = _gameState.value.pieces.find { it.position == respuestaIA.from }
+            val esValido = piezaIA != null && MoveValidator.esMovimientoValido(
+                piezaIA, respuestaIA.to, _gameState.value.pieces, _gameState.value.boardSize
+            )
+
+            if (esValido) {
+                val piezasActualizadas = realizarDesplazamiento(_gameState.value.pieces, respuestaIA.from, respuestaIA.to)
+
+                // Incrementamos el índice de paso aquí también para que el contador avance
+                _gameState.update { it.copy(
+                    pieces = piezasActualizadas,
+                    puzzleStepIndex = it.puzzleStepIndex + 1,
+                    currentTurn = PieceColor.ORO
+                )}
+                evaluarEstadoFinal(piezasActualizadas, PieceColor.ORO)
+            } else {
+                // Si la jugada de la IA definida en el puzzle falla, devolvemos el turno al usuario
+                _gameState.update { it.copy(currentTurn = PieceColor.ORO) }
+            }
+        }
+    }
+
+    private fun evaluarEstadoFinal(piezas: List<ChessPiece>, colorTurno: PieceColor) {
+        val currentState = _gameState.value
+        if (currentState.estaCargandoNivel) return
+
+        val size = currentState.boardSize
+
+        // Cálculos necesarios antes del update
+        val enJaque = estaElReyEnJaque(colorTurno, piezas, size)
+        val esMate = enJaque && verificarSiEsJaqueMate(colorTurno, piezas, size)
+        val esAhogado = !enJaque && esAhogado(colorTurno, piezas, size)
+        val esTablasMaterial = verificarTablasPorMaterial(piezas)
+
+        val reyDerrotado = if (esMate) piezas.find { it.type == PieceType.REY && it.color == colorTurno } else null
+
+        // Actualización de estado
+        _gameState.update { state ->
+            state.copy(
+                pieces = if (esMate) piezas.map { if (it == reyDerrotado) it.copy(isFallen = true) else it } else piezas,
+                esJaque = enJaque,
+                esJaqueMate = esMate,
+                esJuegoBloqueado = false,
+                posicionReyDerrotado = reyDerrotado?.position,
+                esAhogado = esAhogado,
+                esTablas = esAhogado || esTablasMaterial,
+                ganador = if (esMate) (if (colorTurno == PieceColor.ORO) PieceColor.PLATA else PieceColor.ORO) else null
+            )
+        }
+
+        // --- INTEGRACIÓN DE PUNTOS Y VICTORIA ---
+        if (esMate) {
+            SoundManager.play(R.raw.victoria)
+            procesarFinDeNivel(currentState.nivelActualInt)
+
+            // Avance automático
+            if (currentState.modoJuego != GameMode.LIBRE) {
+                viewModelScope.launch {
+                    delay(2000)
+                    // Se utiliza una referencia al contexto guardado o se pasa por parámetro
+                    // Si este método no tiene acceso a context, debe llamarse desde la UI
+                }
+            }
+        } else if (enJaque) {
+            SoundManager.play(R.raw.check)
+        }
+    }
+
+// En BoardViewModel.kt
+
+    // Añade esta variable para acumular puntos en memoria durante la partida
+    private var puntosAcumuladosEnSesion = 0
+
+    // Dentro de BoardViewModel
+    private var _appContext: Context? = null // <-- AGREGA ESTA VARIABLE
+
+    fun setContext(context: Context) {
+        _appContext = context.applicationContext
+    }
+    private fun procesarFinDeNivel(nivel: Int) {
+        val context = _appContext ?: return
+
+        val puntosPorNivel = 100
+        val puntosActuales = _gameState.value.puntosTotales
+        val nuevosPuntos = puntosActuales + puntosPorNivel
+
+        PreferencesManager.guardarPuntos(puntosPorNivel, context)
+
+        // Lógica dinámica para seleccionar el video según el nivel
+        val esNivelEspecial = (nivel % 10 == 0)
+
+        // Asignamos el recurso dinámicamente usando un 'when'
+        val videoAsignado = when (nivel) {
+            10 -> R.raw.video_felicitacion_10
+            20 -> R.raw.video_felicitacion_20
+            30 -> R.raw.video_felicitacion_30 // <--- Aquí ya cargará el del 30
+            40 -> R.raw.video_felicitacion_40 // <--- Aquí ya cargará el del 30
+            else -> null
+        }
+
+        _gameState.update {
+            it.copy(
+                puntosTotales = nuevosPuntos,
+                videoEventoPendiente = videoAsignado // Usamos la variable dinámica
+            )
+        }
+
+        if (!esNivelEspecial) {
+            val mensaje = obtenerMensajeDeRecompensa(nuevosPuntos)
+            if (mensaje != null) {
+                _gameState.update { it.copy(mensajeError = mensaje) }
+                viewModelScope.launch {
+                    delay(3000)
+                    _gameState.update { it.copy(mensajeError = null) }
+                }
+            }
+        }
+    }
+
+
+    fun guardarProgresoFinal(context: Context) {
+        PreferencesManager.guardarPuntos(puntosAcumuladosEnSesion, context)
+        puntosAcumuladosEnSesion = 0 // Reiniciamos el contador de sesión
+    }
+
+    // En BoardViewModel.kt
+    fun limpiarVideoEvento() {
+        _gameState.update { it.copy(videoEventoPendiente = null) }
+    }
+
 
     fun reiniciarTodoElProgreso() {
         _gameState.update {
@@ -950,12 +1003,39 @@ class BoardViewModel : ViewModel() {
         }
     }
 
-    fun cargarModo(size: Int, modo: GameMode, puzzle: ChessPuzzle?, nivel: Int = 0) { // nivel por defecto 0
-        // Si es modo LIBRE, ignoramos cualquier nivel guardado
+    fun iniciarModoPractica(context: Context, esContinuo: Boolean = true) {
+        val nivelGuardado = PreferencesManager.obtenerNivelMaximo(context)
+        val nivelAIniciar = if (nivelGuardado > 0) nivelGuardado else 1
+
+        val config = NivelRepository.obtenerNivel(nivelAIniciar)
+
+        if (config != null) {
+            Log.d("DEBUG_JASC", "Cargando Nivel: $nivelAIniciar, Tamaño: ${config.size}")
+
+            _gameState.update { it.copy(
+                boardSize = config.size, // <--- Esto fuerza el 4x4 o el tamaño del nivel
+                pieces = config.piezas,
+                modoJuego = GameMode.PUZZLE, // Asegúrate de que este sea el modo correcto
+                nivelActualInt = nivelAIniciar,
+                esModoProgresivo = esContinuo,
+                // LIMPIEZA: Aseguramos que no queden rastros de modo libre
+                piezasComidasOro = emptyList(),
+                piezasComidasPlata = emptyList(),
+                historialTableros = listOf(config.piezas)
+            )}
+        } else {
+            Log.e("DEBUG_JASC", "El nivel $nivelAIniciar no existe en NivelRepository")
+        }
+    }
+    fun cargarModo(size: Int, modo: GameMode, puzzle: ChessPuzzle?, nivel: Int = 0) {
+        // CORRECCIÓN: Accedemos al mapa totalNiveles directamente
+        val config = if (modo != GameMode.LIBRE) NivelRepository.totalNiveles[nivel] else null
+        android.util.Log.d("DEBUG_JASC", "Nivel recibido: $nivel | Config encontrada: ${config != null} | maxPasos en repo: ${config?.maxPasos}")
         val piezasNuevas = if (modo == GameMode.LIBRE) {
             if (size == 8) generarSetupEstandar8x8() else NivelRepository.generarSetupPorDefecto(size)
         } else {
-            generarPiezasParaModo(size, nivel)
+            // Si el nivel no existe en el mapa, usamos un fallback seguro
+            config?.piezas ?: generarPiezasParaModo(size, nivel)
         }
 
         _gameState.update { currentState ->
@@ -965,6 +1045,11 @@ class BoardViewModel : ViewModel() {
                 modoJuego = modo,
                 currentPuzzle = puzzle,
                 nivelActualInt = nivel,
+
+                // ASIGNACIÓN CORRECTA
+                maxPasosConfigurado = config?.maxPasos ?: 4,
+                puzzleStepIndex = 0,
+
                 historialTableros = listOf(piezasNuevas),
                 esJaqueMate = false,
                 esTablas = false,
@@ -976,59 +1061,64 @@ class BoardViewModel : ViewModel() {
         }
     }
 
-    fun finalizarYGuardarNivel() {
-        // 1. Generar el código en el Logcat (para que lo tengas de respaldo)
-        generarCodigoDeNivel()
-
-        // 2. Crear configuración
+    // 1. Esta función ahora calcula el ID de forma independiente
+    fun generarCodigoDeNivel(): NivelConfig {
         val currentState = _gameState.value
         val nuevoId = currentState.nivelActualInt + 1
 
-        val nuevoNivelConfig = NivelConfig(
+        return NivelConfig(
             id = nuevoId,
             size = currentState.boardSize,
             piezas = currentState.pieces,
-            turnoInicial = PieceColor.ORO
+            turnoInicial = PieceColor.ORO,
+            secuenciaSolucion = currentState.solucionTemporal.map { mov ->
+                com.jasc.jasc_chess.model.MovimientoSolucion(mov.desde, mov.hacia)
+            },
+            acertijo = currentState.acertijoActual.ifBlank { "Sin acertijo" },
+            respuestaAcertijo = currentState.respuestaActual.ifBlank { "N/A" },
+            // Corregido: 'maxPasos' se define una sola vez aquí abajo
+            maxPasos = currentState.maxPasosConfigurado.coerceAtLeast(1)
         )
+    }
+    fun limpiarCodigoGenerado() {
+        _gameState.update { it.copy(codigoGeneradoVisible = null) }
+    }
+    fun finalizarYGuardarNivel() {
+        val config = generarCodigoDeNivel()
+        NivelRepository.guardarNivel(config)
 
-        // 3. Guardar en el Repositorio
-        NivelRepository.guardarNivel(nuevoNivelConfig)
-        Log.d("JASC_DEBUG", "Nivel $nuevoId guardado en memoria.")
+        // ... (tu lógica de formateo que ya tienes) ...
+        val piezasStr = config.piezas.joinToString(",\n    ") { pieza ->
+            "ChessPiece(\"${pieza.id}\", PieceType.${pieza.type}, PieceColor.${pieza.color}, Position(${pieza.position.row}, ${pieza.position.col}))"
+        }
 
-        // 4. Limpieza segura
-        _gameState.update { it.copy(isEditingMode = false) }
-        // modoEdicion = false // Asegúrate de que esto sea una variable observada si es necesario
+        val solucionesStr = config.secuenciaSolucion.joinToString(", ") { mov ->
+            "MovimientoSolucion(Position(${mov.desde.row}, ${mov.desde.col}), Position(${mov.hacia.row}, ${mov.hacia.col}))"
+        }
 
-        // 5. Salto seguro: Solo intentamos cambiar si sabemos que existe
-        val configVerificada = NivelRepository.obtenerNivel(nuevoId)
-        if (configVerificada != null) {
-            cambiarNivel(nuevoId)
-        } else {
-            Log.e("JASC_DEBUG", "Error: El nivel $nuevoId no se pudo cargar tras guardarlo.")
-            // Si falla, volvemos al nivel anterior para no dejar el tablero en blanco
-            cambiarNivel(currentState.nivelActualInt)
+        val codigoFormateado = """
+        ${config.id} to NivelConfig(id = ${config.id}, size = ${config.size}, piezas = listOf(
+            $piezasStr
+        ), turnoInicial = PieceColor.${config.turnoInicial},
+        secuenciaSolucion = listOf($solucionesStr),
+        acertijo = "${config.acertijo}", respuestaAcertijo = "${config.respuestaAcertijo}", maxPasos = ${config.maxPasos})
+    """.trimIndent()
+
+        Log.d("JASC_DEBUG", "Nivel guardado. Código:\n$codigoFormateado")
+
+        // ACTUALIZACIÓN AQUÍ:
+        // 1. isEditingMode = false (cierra el panel)
+        // 2. partidaIniciada = true (prepara el tablero para jugar)
+        _gameState.update { currentState ->
+            currentState.copy(
+                isEditingMode = false,
+                partidaIniciada = true,
+                codigoGeneradoVisible = codigoFormateado
+            )
         }
     }
 
-    // Asegúrate de que esta función tenga Log.e para que resalte en la consola
-    fun generarCodigoDeNivel() {
-        val piezas = _gameState.value.pieces
-        val sb = StringBuilder()
-        var oroCount = 0
-        var plataCount = 0
-
-        sb.append("NivelConfig(piezas = listOf(\n")
-        piezas.forEach { p ->
-            val colorSufijo = if (p.color == PieceColor.ORO) "oro" else "plata"
-            val tipoSufijo = p.type.name.lowercase()
-            val count = if (p.color == PieceColor.ORO) ++oroCount else ++plataCount
-            val idLimpio = "n${count}_${tipoSufijo}_${colorSufijo}"
-            sb.append("    ChessPiece(\"$idLimpio\", PieceType.${p.type}, PieceColor.${p.color}, Position(${p.position.row}, ${p.position.col})),\n")
-        }
-        sb.append("), turnoInicial = PieceColor.ORO)")
-
-        // USAMOS Log.e para que aparezca en ROJO en la consola y no lo pierdas
-        Log.e("JASC_GENERADOR", sb.toString())
+    fun actualizarMaxPasos(nuevosPasos: Int) {
+        _gameState.update { it.copy(maxPasosConfigurado = nuevosPasos) }
     }
-
 }

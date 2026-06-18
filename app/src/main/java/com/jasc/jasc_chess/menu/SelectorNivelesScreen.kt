@@ -30,15 +30,12 @@ import androidx.compose.runtime.mutableIntStateOf // <-- OPTIMIZACIÓN
 fun SelectorNivelesScreen(navController: NavController, viewModel: BoardViewModel) {
     val context = LocalContext.current
 
-    // Inicializamos el contexto en el VM para evitar el error de parámetro
-    LaunchedEffect(Unit) {
-        viewModel.setContext(context)
-    }
-
+    // Usamos 'remember' con 'mutableIntStateOf' para mantener los valores
     val nivelMaximo = remember { mutableIntStateOf(PreferencesManager.obtenerNivelMaximo(context)) }
     val puntosTotales = remember { mutableIntStateOf(PreferencesManager.obtenerPuntos(context)) }
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0F172A))) {
+        // Header de Puntos
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp, end = 20.dp),
             horizontalArrangement = Arrangement.End
@@ -58,6 +55,7 @@ fun SelectorNivelesScreen(navController: NavController, viewModel: BoardViewMode
             }
         }
 
+        // Lista de niveles
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(top = 80.dp, bottom = 40.dp),
@@ -86,12 +84,17 @@ fun SelectorNivelesScreen(navController: NavController, viewModel: BoardViewMode
                     modifier = Modifier.offset(x = horizontalPadding),
                     onClick = {
                         if (estaDesbloqueado) {
+                            // IMPORTANTE: Al llamar a cargarPartida, el ViewModel ya
+                            // actualiza el State con maxPasosConfigurado y el nivel correcto.
                             viewModel.cargarPartida(nivel)
+
+                            // Navegamos inmediatamente después.
                             navController.navigate("juego")
                         }
                     }
                 )
 
+                // Conector visual entre niveles
                 if (nivel < NivelRepository.totalNiveles.size) {
                     Box(
                         modifier = Modifier

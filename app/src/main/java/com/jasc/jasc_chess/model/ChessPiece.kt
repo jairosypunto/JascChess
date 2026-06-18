@@ -4,7 +4,7 @@ enum class PieceType { PEON, TORRE, CABALLO, ALFIL, REINA, REY }
 enum class PieceColor { ORO, PLATA }
 
 data class Position(val row: Int, val col: Int)
-
+data class MovimientoSolucion(val desde: Position, val hacia: Position)
 data class ChessPiece(
     val id: String, // ¡NO uses System.currentTimeMillis() aquí!
     val type: PieceType,

@@ -21,6 +21,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import com.jasc.jasc_chess.R
 import com.jasc.jasc_chess.model.ChessPiece
 import com.jasc.jasc_chess.model.PieceColor
 import com.jasc.jasc_chess.model.PieceType
@@ -31,14 +32,21 @@ fun ChessPieceView(
     isSelected: Boolean,
     resId: Int?,
     simbolo: String,
-    modifier: Modifier = Modifier, // Modifier siempre es el primer opcional
+    modifier: Modifier = Modifier,
     esJaqueMate: Boolean = false,
     colorGanador: PieceColor? = null
 ) {
     val esReyCaido = (piece.type == PieceType.REY && esJaqueMate && piece.color != colorGanador)
 
+    // Ajuste específico: solo para los Reyes del estilo "tradicional" (sin sufijos)
+    // Usamos 1.1f para que el aumento sea suave y no se vea gigante
+    val esReyTradicional = piece.type == PieceType.REY &&
+            (resId == R.drawable.tradicional_rey_blanco || resId == R.drawable.tradicional_rey_negro)
+
+    val baseScale = if (esReyTradicional) 1.1f else 1.0f
+
     val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.8f else if (esReyCaido) 1.2f else 1.0f,
+        targetValue = (if (isSelected) 1.8f else if (esReyCaido) 1.2f else 1.0f) * baseScale,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
         label = "scale"
     )
@@ -49,7 +57,6 @@ fun ChessPieceView(
         label = "rotation"
     )
 
-    // Definimos el transformModifier una sola vez
     val transformModifier = Modifier
         .graphicsLayer(
             scaleX = scale,
@@ -79,7 +86,7 @@ fun ChessPieceView(
                 modifier = Modifier
                     .fillMaxSize()
                     .then(transformModifier)
-                    .wrapContentSize(Alignment.Center) // Ahora importado y en la cadena
+                    .wrapContentSize(Alignment.Center)
             )
         }
     }

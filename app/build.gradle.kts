@@ -52,6 +52,7 @@ dependencies {
     // 💡 SOLUCIÓN DIRECTA POR TEXTO (Nos saltamos el archivo TOML para evitar el fallo)
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
     implementation("androidx.navigation:navigation-compose:2.8.0") // O la versión que estés usando
+    implementation("androidx.compose.foundation:foundation:1.x.x") // La versión que estés usando
     // Pruebas Unitarias
     testImplementation(libs.junit)
 
