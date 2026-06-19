@@ -546,10 +546,15 @@ class BoardViewModel : ViewModel() {
 
         if (NivelRepository.totalNiveles.containsKey(siguienteNivel)) {
             val mensaje = when (siguienteNivel) {
+                in 1..10 -> "¡Nivel $nivelActual completado! Vamos por el $siguienteNivel."
                 in 11..20 -> "¡Nivel $nivelActual superado! ¡Bien hecho!"
                 in 21..30 -> "¡Impresionante! Ya tienes una lógica excelente."
-                else -> "¡Nivel $nivelActual completado! Vamos por el $siguienteNivel."
+                in 31..40 -> "¡Brillante! Tu estrategia está alcanzando nivel maestro."
+                in 41..50 -> "¡Asombroso! Tus jugadas son dignas de un campeón."
+                in 51..60 -> "¡Épico! Has dominado cada desafío con precisión y mente aguda."
+                else -> "🏆 ¡FELICIDADES! Has completado todos los niveles. Eres un Gran Maestro del ajedrez."
             }
+
 
             PreferencesManager.guardarNivelMaximo(siguienteNivel, context)
             _gameState.update { it.copy(mensajeFinal = mensaje) }
@@ -562,7 +567,7 @@ class BoardViewModel : ViewModel() {
             _gameState.update {
                 it.copy(
                     puzzleResuelto = true,
-                    mensajeFinal = "¡FELICIDADES! Has completado todos los niveles. Eres un Maestro."
+                    mensajeFinal = "🏆 ¡Has completado todos los niveles! Eres un Gran Maestro del ajedrez.",
                 )
             }
         }
@@ -893,7 +898,9 @@ class BoardViewModel : ViewModel() {
             10 -> R.raw.video_felicitacion_10
             20 -> R.raw.video_felicitacion_20
             30 -> R.raw.video_felicitacion_30 // <--- Aquí ya cargará el del 30
-            40 -> R.raw.video_felicitacion_40 // <--- Aquí ya cargará el del 30
+            40 -> R.raw.video_felicitacion_40
+            50 -> R.raw.video_felicitacion_50
+            60 -> R.raw.video_felicitacion_60
             else -> null
         }
 
