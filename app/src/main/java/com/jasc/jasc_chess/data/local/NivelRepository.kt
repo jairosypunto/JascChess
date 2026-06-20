@@ -804,6 +804,22 @@ object NivelRepository {
         ), turnoInicial = PieceColor.ORO,
             listOf(MovimientoSolucion(Position(3, 2), Position(1, 0))),
             acertijo = "¿Cuánto es 9 x 3 + 3 ", respuestaAcertijo = "30", maxPasos = 4),
+
+        61 to NivelConfig(id = 61, size = 5, piezas = listOf(
+            ChessPiece("peon_plata_3_3", PieceType.PEON, PieceColor.ORO, Position(3, 3)),
+            ChessPiece("caballo_plata_2_2", PieceType.CABALLO, PieceColor.ORO, Position(2, 2)),
+            ChessPiece("caballo_plata_4_4", PieceType.CABALLO, PieceColor.ORO, Position(4, 4)),
+            ChessPiece("torre_plata_4_0", PieceType.TORRE, PieceColor.ORO, Position(4, 0)),
+            ChessPiece("peon_oro_3_1", PieceType.PEON, PieceColor.PLATA, Position(3, 1)),
+            ChessPiece("peon_oro_3_2", PieceType.PEON, PieceColor.PLATA, Position(3, 2)),
+            ChessPiece("peon_oro_1_4", PieceType.PEON, PieceColor.PLATA, Position(1, 4)),
+            ChessPiece("peon_oro_1_3", PieceType.PEON, PieceColor.PLATA, Position(1, 3)),
+            ChessPiece("alfil_oro_0_2", PieceType.ALFIL, PieceColor.PLATA, Position(0, 2)),
+            ChessPiece("alfil_oro_2_1", PieceType.ALFIL, PieceColor.PLATA, Position(2, 1)),
+            ChessPiece("rey_oro_0_4", PieceType.REY, PieceColor.PLATA, Position(0, 4))
+        ), turnoInicial = PieceColor.ORO,
+            listOf(MovimientoSolucion(Position(4, 4), Position(2, 3))),
+            acertijo = "¿Cuánto es 8 x 3 + 3 ", respuestaAcertijo = "27", maxPasos = 2),
     )
 
 fun generarSetupPorDefecto(size: Int): List<ChessPiece> {

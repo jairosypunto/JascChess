@@ -649,7 +649,7 @@ class BoardViewModel : ViewModel() {
         val piezaMoviendose = state.pieces.find { it.position == origen } ?: return
         val nivelActual = NivelRepository.obtenerNivel(state.nivelActualInt) ?: return
 
-        // 1. VALIDACIÓN SILENCIOSA: Si no es legal, simplemente abortamos sin bloquear la UI
+        // 1. VALIDACIÓN SILENCIOSA
         if (!MoveValidator.esMovimientoValido(piezaMoviendose, destino, state.pieces, state.boardSize)) {
             _gameState.update { it.copy(selectedPosition = null, validMoves = emptyList()) }
             return
@@ -666,7 +666,7 @@ class BoardViewModel : ViewModel() {
                 currentTurn = PieceColor.PLATA,
                 selectedPosition = null,
                 validMoves = emptyList(),
-                mensajeError = null // Nos aseguramos de limpiar cualquier mensaje previo
+                mensajeError = null
             )
         }
 
@@ -677,8 +677,13 @@ class BoardViewModel : ViewModel() {
         if (estadoPost.esJaqueMate) {
             _gameState.update { it.copy(puzzleResuelto = true, mensajeFinal = "¡Nivel ${state.nivelActualInt} Superado!") }
         } else if (nuevoStep >= nivelActual.maxPasos) {
+            // --- AQUÍ ESTÁ EL CAMBIO ---
+            // 1. Primero actualizamos el mensaje para que la UI lo pinte
+            _gameState.update { it.copy(mensajeError = "¡Agotaste los ${nivelActual.maxPasos} intentos! Reiniciando...") }
+
+            // 2. Luego lanzamos el reinicio con espera
             viewModelScope.launch {
-                delay(1000)
+                delay(2000) // 2 segundos para que el jugador vea el mensaje
                 reiniciarPartida()
             }
         } else {
