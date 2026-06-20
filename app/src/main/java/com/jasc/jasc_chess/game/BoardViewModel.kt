@@ -642,11 +642,66 @@ class BoardViewModel : ViewModel() {
         }
     }
 
+// --- BLOQUE CORREGIDO: VALIDACIÓN Y DESPLAZAMIENTO PROFESIONAL ---
+
+    fun validarJugadaPuzzle(origen: Position, destino: Position) {
+        val state = _gameState.value
+        val piezaMoviendose = state.pieces.find { it.position == origen } ?: return
+        val nivelActual = NivelRepository.obtenerNivel(state.nivelActualInt) ?: return
+
+        // 1. VALIDACIÓN SILENCIOSA: Si no es legal, simplemente abortamos sin bloquear la UI
+        if (!MoveValidator.esMovimientoValido(piezaMoviendose, destino, state.pieces, state.boardSize)) {
+            _gameState.update { it.copy(selectedPosition = null, validMoves = emptyList()) }
+            return
+        }
+
+        // 2. EJECUCIÓN SEGURA
+        val piezasDespues = realizarDesplazamiento(state.pieces, origen, destino)
+        val nuevoStep = state.puzzleStepIndex + 1
+
+        _gameState.update {
+            it.copy(
+                pieces = piezasDespues,
+                puzzleStepIndex = nuevoStep,
+                currentTurn = PieceColor.PLATA,
+                selectedPosition = null,
+                validMoves = emptyList(),
+                mensajeError = null // Nos aseguramos de limpiar cualquier mensaje previo
+            )
+        }
+
+        // 3. EVALUACIÓN DE ESTADO
+        evaluarEstadoFinal(piezasDespues, PieceColor.PLATA)
+        val estadoPost = _gameState.value
+
+        if (estadoPost.esJaqueMate) {
+            _gameState.update { it.copy(puzzleResuelto = true, mensajeFinal = "¡Nivel ${state.nivelActualInt} Superado!") }
+        } else if (nuevoStep >= nivelActual.maxPasos) {
+            viewModelScope.launch {
+                delay(1000)
+                reiniciarPartida()
+            }
+        } else {
+            viewModelScope.launch {
+                delay(600)
+                if (state.currentPuzzle != null) ejecutarRespuestaIA(state.currentPuzzle)
+                else ejecutarTurnoIA()
+            }
+        }
+    }
+
     fun realizarDesplazamiento(piezas: List<ChessPiece>, origen: Position, destino: Position): List<ChessPiece> {
         val nuevasPiezas = piezas.toMutableList()
         val piezaMovida = nuevasPiezas.find { it.position == origen } ?: return piezas
         val piezaCapturada = nuevasPiezas.find { it.position == destino }
 
+        // 4. BLINDAJE: Impedir captura del Rey en cualquier circunstancia
+        if (piezaCapturada?.type == PieceType.REY) {
+            Log.e("SEGURIDAD", "Captura de REY detectada y bloqueada.")
+            return piezas
+        }
+
+        // 5. Gestión de capturas y cementerio
         if (piezaCapturada != null) {
             _gameState.update { state ->
                 if (piezaCapturada.color == PieceColor.ORO)
@@ -657,62 +712,12 @@ class BoardViewModel : ViewModel() {
             nuevasPiezas.remove(piezaCapturada)
         }
 
+        // 6. Mover pieza
         val idx = nuevasPiezas.indexOf(piezaMovida)
         if (idx != -1) nuevasPiezas[idx] = piezaMovida.copy(position = destino)
+
         _gameState.update { it.copy(casillaPista = null) }
         return nuevasPiezas
-    }
-
-
-    // 1. DENTRO DE TU FUNCIÓN validarJugadaPuzzle
-    fun validarJugadaPuzzle(origen: Position, destino: Position) {
-        val state = _gameState.value
-        val nivelActual = NivelRepository.obtenerNivel(state.nivelActualInt) ?: return
-
-        val piezasDespues = realizarDesplazamiento(state.pieces, origen, destino)
-        val nuevoStep = state.puzzleStepIndex + 1
-
-        _gameState.update {
-            it.copy(
-                pieces = piezasDespues,
-                puzzleStepIndex = nuevoStep,
-                currentTurn = PieceColor.PLATA,
-                selectedPosition = null,
-                validMoves = emptyList()
-            )
-        }
-
-        evaluarEstadoFinal(piezasDespues, PieceColor.PLATA)
-        val estadoPost = _gameState.value
-
-        // 1. EVALUAR VICTORIA (Jaque Mate)
-        if (estadoPost.esJaqueMate) {
-            _gameState.update { it.copy(puzzleResuelto = true, mensajeFinal = "¡Nivel ${state.nivelActualInt} Superado!") }
-        }
-        // 2. EVALUAR EMPATE (Ahogado o Tablas) - ¡ESTO ES LO QUE FALTABA INTERCEPTAR!
-        else if (estadoPost.esAhogado || estadoPost.esTablas) {
-            // No hacemos nada, dejamos que los estados se mantengan en true
-            // para que tu AlertDialog se dispare en la UI.
-            // NO llamamos a reiniciarPartida() aquí, la UI lo hará al pulsar el botón.
-        }
-        // 3. EVALUAR LÍMITE DE PASOS
-        else if (nuevoStep >= nivelActual.maxPasos) {
-            viewModelScope.launch {
-                _gameState.update {
-                    it.copy(mensajeError = "Sus ${nivelActual.maxPasos} intentos se han agotado. Reiniciando...")
-                }
-                delay(2000)
-                reiniciarPartida()
-            }
-        }
-        // 4. CONTINUAR JUEGO (IA)
-        else {
-            viewModelScope.launch {
-                delay(600)
-                if (state.currentPuzzle != null) ejecutarRespuestaIA(state.currentPuzzle)
-                else ejecutarTurnoIA()
-            }
-        }
     }
 
     fun deshacerJugada() {
