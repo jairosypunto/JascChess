@@ -764,6 +764,7 @@ fun VideoFelicitacion(nivel: Int, onDismiss: () -> Unit) {
         40 -> R.raw.video_felicitacion_40
         50 -> R.raw.video_felicitacion_50
         60 -> R.raw.video_felicitacion_60
+        70 -> R.raw.video_felicitacion_70
         else -> R.raw.victoria // Asegúrate de que victoria.mp3 exista en /raw
     }
 

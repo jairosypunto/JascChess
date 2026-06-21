@@ -820,6 +820,163 @@ object NivelRepository {
         ), turnoInicial = PieceColor.ORO,
             listOf(MovimientoSolucion(Position(4, 4), Position(2, 3))),
             acertijo = "¿Cuánto es 8 x 3 + 3 ", respuestaAcertijo = "27", maxPasos = 2),
+
+        62 to NivelConfig(id = 62, size = 5, piezas = listOf(
+            ChessPiece("torre_oro_1_0", PieceType.TORRE, PieceColor.ORO, Position(1, 0)),
+            ChessPiece("caballo_oro_3_0", PieceType.CABALLO, PieceColor.ORO, Position(3, 0)),
+            ChessPiece("alfil_oro_3_1", PieceType.ALFIL, PieceColor.ORO, Position(3, 1)),
+            ChessPiece("peon_plata_1_4", PieceType.PEON, PieceColor.PLATA, Position(1, 4)),
+            ChessPiece("peon_plata_2_3", PieceType.PEON, PieceColor.PLATA, Position(2, 3)),
+            ChessPiece("alfil_plata_3_2", PieceType.ALFIL, PieceColor.PLATA, Position(3, 2)),
+            ChessPiece("caballo_plata_2_4", PieceType.CABALLO, PieceColor.PLATA, Position(2, 4)),
+            ChessPiece("reina_plata_3_4", PieceType.REINA, PieceColor.PLATA, Position(3, 4)),
+            ChessPiece("rey_plata_0_3", PieceType.REY, PieceColor.PLATA, Position(0, 3))
+        ), turnoInicial = PieceColor.ORO,
+            listOf(MovimientoSolucion(Position(3, 0), Position(2, 2))),
+            acertijo = "¿Cuánto es 8 x 4 + 3 ", respuestaAcertijo = "35", maxPasos = 2),
+
+        63 to NivelConfig(id = 63, size = 6, piezas = listOf(
+            ChessPiece("peon_oro_5_5", PieceType.PEON, PieceColor.ORO, Position(5, 5)),
+            ChessPiece("peon_oro_5_4", PieceType.PEON, PieceColor.ORO, Position(5, 4)),
+            ChessPiece("alfil_oro_5_3", PieceType.ALFIL, PieceColor.ORO, Position(5, 3)),
+            ChessPiece("reina_oro_1_2", PieceType.REINA, PieceColor.ORO, Position(1, 2)),
+            ChessPiece("peon_plata_1_5", PieceType.PEON, PieceColor.PLATA, Position(1, 5)),
+            ChessPiece("peon_plata_2_4", PieceType.PEON, PieceColor.PLATA, Position(2, 4)),
+            ChessPiece("peon_plata_3_2", PieceType.PEON, PieceColor.PLATA, Position(3, 2)),
+            ChessPiece("alfil_plata_4_1", PieceType.ALFIL, PieceColor.PLATA, Position(4, 1)),
+            ChessPiece("rey_plata_2_5", PieceType.REY, PieceColor.PLATA, Position(2, 5))
+        ), turnoInicial = PieceColor.ORO,
+            listOf(MovimientoSolucion(Position(1, 2), Position(0, 3))),
+            acertijo = "¿Cuánto es 4 x 3 + 3 ", respuestaAcertijo = "15", maxPasos = 2),
+
+        64 to NivelConfig(id = 64, size = 4, piezas = listOf(
+            ChessPiece("rey_plata_0_0", PieceType.REY, PieceColor.PLATA, Position(0, 0)),
+            ChessPiece("peon_oro_3_1", PieceType.PEON, PieceColor.ORO, Position(3, 1)),
+            ChessPiece("peon_oro_2_2", PieceType.PEON, PieceColor.ORO, Position(2, 2)),
+            ChessPiece("alfil_oro_2_0", PieceType.ALFIL, PieceColor.ORO, Position(2, 0)),
+            ChessPiece("alfil_oro_1_2", PieceType.ALFIL, PieceColor.ORO, Position(1, 2))
+        ), turnoInicial = PieceColor.ORO,
+            listOf(MovimientoSolucion(Position(2, 0), Position(1, 1))),
+            acertijo = "¿Cuánto es 6 x 3 + 8 ", respuestaAcertijo = "26", maxPasos = 2),
+        65 to NivelConfig(id = 65, size = 5, piezas = listOf(
+            ChessPiece("torre_oro_0_4", PieceType.TORRE, PieceColor.ORO, Position(0, 4)),
+            ChessPiece("torre_oro_1_4", PieceType.TORRE, PieceColor.ORO, Position(1, 4)),
+            ChessPiece("peon_oro_2_2", PieceType.PEON, PieceColor.ORO, Position(2, 2)),
+            ChessPiece("peon_plata_1_0", PieceType.PEON, PieceColor.PLATA, Position(1, 0)),
+            ChessPiece("peon_plata_1_2", PieceType.PEON, PieceColor.PLATA, Position(1, 2)),
+            ChessPiece("peon_plata_2_1", PieceType.PEON, PieceColor.PLATA, Position(2, 1)),
+            ChessPiece("peon_plata_2_3", PieceType.PEON, PieceColor.PLATA, Position(2, 3)),
+            ChessPiece("alfil_plata_4_4", PieceType.ALFIL, PieceColor.PLATA, Position(4, 4)),
+            ChessPiece("reina_plata_3_3", PieceType.REINA, PieceColor.PLATA, Position(3, 3)),
+            ChessPiece("rey_plata_0_0", PieceType.REY, PieceColor.PLATA, Position(0, 0)),
+            ChessPiece("torre_plata_0_1", PieceType.TORRE, PieceColor.PLATA, Position(0, 1))
+        ), turnoInicial = PieceColor.ORO,
+            listOf(MovimientoSolucion(Position(0, 4), Position(0, 1))),
+            acertijo = "¿Cuánto es 6 x 6 + 9 ", respuestaAcertijo = "45", maxPasos = 2),
+        66 to NivelConfig(id = 66, size = 5, piezas = listOf(
+            ChessPiece("reina_plata_4_1", PieceType.REINA, PieceColor.PLATA, Position(4, 1)),
+            ChessPiece("peon_plata_3_4", PieceType.PEON, PieceColor.PLATA, Position(3, 4)),
+            ChessPiece("peon_plata_2_3", PieceType.PEON, PieceColor.PLATA, Position(2, 3)),
+            ChessPiece("peon_plata_1_2", PieceType.PEON, PieceColor.PLATA, Position(1, 2)),
+            ChessPiece("rey_plata_1_3", PieceType.REY, PieceColor.PLATA, Position(1, 3)),
+            ChessPiece("alfil_oro_3_3", PieceType.ALFIL, PieceColor.ORO, Position(3, 3)),
+            ChessPiece("reina_oro_0_0", PieceType.REINA, PieceColor.ORO, Position(0, 0))
+        ), turnoInicial = PieceColor.ORO,
+            listOf(MovimientoSolucion(Position(3, 3), Position(2, 2))),
+            acertijo = "¿Cuánto es 7 x 6 - 7 ", respuestaAcertijo = "35", maxPasos = 2),
+
+        67 to NivelConfig(id = 67, size = 6, piezas = listOf(
+            ChessPiece("caballo_plata_0_0", PieceType.CABALLO, PieceColor.PLATA, Position(0, 0)),
+            ChessPiece("alfil_plata_0_1", PieceType.ALFIL, PieceColor.PLATA, Position(0, 1)),
+            ChessPiece("peon_plata_1_0", PieceType.PEON, PieceColor.PLATA, Position(1, 0)),
+            ChessPiece("peon_plata_1_1", PieceType.PEON, PieceColor.PLATA, Position(1, 1)),
+            ChessPiece("peon_plata_3_3", PieceType.PEON, PieceColor.PLATA, Position(3, 3)),
+            ChessPiece("rey_plata_2_2", PieceType.REY, PieceColor.PLATA, Position(2, 2)),
+            ChessPiece("peon_oro_3_2", PieceType.PEON, PieceColor.ORO, Position(3, 2)),
+            ChessPiece("alfil_oro_3_0", PieceType.ALFIL, PieceColor.ORO, Position(3, 0)),
+            ChessPiece("alfil_oro_4_4", PieceType.ALFIL, PieceColor.ORO, Position(4, 4)),
+            ChessPiece("caballo_oro_5_1", PieceType.CABALLO, PieceColor.ORO, Position(5, 1)),
+            ChessPiece("reina_oro_3_5", PieceType.REINA, PieceColor.ORO, Position(3, 5))
+        ), turnoInicial = PieceColor.ORO,
+            listOf(MovimientoSolucion(Position(3, 3), Position(2, 2))),
+            acertijo = "¿Cuánto es 6 x 6 - 7 ", respuestaAcertijo = "43", maxPasos = 2),
+
+        68 to NivelConfig(id = 68, size = 6, piezas = listOf(
+            ChessPiece("reina_oro_5_3", PieceType.REINA, PieceColor.ORO, Position(5, 3)),
+            ChessPiece("peon_oro_2_1", PieceType.PEON, PieceColor.ORO, Position(2, 1)),
+            ChessPiece("alfil_oro_1_3", PieceType.ALFIL, PieceColor.ORO, Position(1, 3)),
+            ChessPiece("peon_plata_1_1", PieceType.PEON, PieceColor.PLATA, Position(1, 1)),
+            ChessPiece("peon_plata_3_0", PieceType.PEON, PieceColor.PLATA, Position(3, 0)),
+            ChessPiece("rey_plata_0_0", PieceType.REY, PieceColor.PLATA, Position(0, 0)),
+            ChessPiece("alfil_plata_0_1", PieceType.ALFIL, PieceColor.PLATA, Position(0, 1))
+        ), turnoInicial = PieceColor.ORO,
+            listOf(MovimientoSolucion(Position(5, 3), Position(2, 0))),
+            acertijo = "¿Cuánto es 6 x 9 - 7 ", respuestaAcertijo = "47", maxPasos = 2),
+
+        69 to NivelConfig(id = 69, size = 4, piezas = listOf(
+            ChessPiece("rey_plata_0_0", PieceType.REY, PieceColor.PLATA, Position(0, 0)),
+            ChessPiece("peon_plata_1_1", PieceType.PEON, PieceColor.PLATA, Position(1, 1)),
+            ChessPiece("torre_plata_1_2", PieceType.TORRE, PieceColor.PLATA, Position(1, 2)),
+            ChessPiece("caballo_plata_2_2", PieceType.CABALLO, PieceColor.PLATA, Position(2, 2)),
+            ChessPiece("caballo_oro_0_2", PieceType.CABALLO, PieceColor.ORO, Position(0, 2)),
+            ChessPiece("caballo_oro_1_3", PieceType.CABALLO, PieceColor.ORO, Position(1, 3)),
+            ChessPiece("reina_oro_3_2", PieceType.REINA, PieceColor.ORO, Position(3, 2))
+        ), turnoInicial = PieceColor.ORO,
+            listOf(MovimientoSolucion(Position(5, 3), Position(2, 0))),
+            acertijo = "¿Cuánto es 8 x 9 - 5 ", respuestaAcertijo = "67", maxPasos = 2),
+
+        70 to NivelConfig(id = 70, size = 4, piezas = listOf(
+            ChessPiece("reina_oro_2_0", PieceType.REINA, PieceColor.ORO, Position(2, 0)),
+            ChessPiece("caballo_oro_1_1", PieceType.CABALLO, PieceColor.ORO, Position(1, 1)),
+            ChessPiece("caballo_oro_3_2", PieceType.CABALLO, PieceColor.ORO, Position(3, 2)),
+            ChessPiece("caballo_plata_2_1", PieceType.CABALLO, PieceColor.PLATA, Position(2, 1)),
+            ChessPiece("alfil_plata_1_2", PieceType.ALFIL, PieceColor.PLATA, Position(1, 2)),
+            ChessPiece("rey_plata_0_2", PieceType.REY, PieceColor.PLATA, Position(0, 2))
+        ), turnoInicial = PieceColor.ORO,
+            listOf(MovimientoSolucion(Position(1, 1), Position(2, 3))),
+            acertijo = "¿Cuánto es 9 x 9 - 6 ", respuestaAcertijo = "75", maxPasos = 2),
+
+        71 to NivelConfig(id = 71, size = 5, piezas = listOf(
+            ChessPiece("reina_oro_4_0", PieceType.REINA, PieceColor.ORO, Position(4, 0)),
+            ChessPiece("alfil_oro_4_2", PieceType.ALFIL, PieceColor.ORO, Position(4, 2)),
+            ChessPiece("alfil_oro_4_3", PieceType.ALFIL, PieceColor.ORO, Position(4, 3)),
+            ChessPiece("peon_plata_2_2", PieceType.PEON, PieceColor.PLATA, Position(2, 2)),
+            ChessPiece("peon_plata_2_3", PieceType.PEON, PieceColor.PLATA, Position(2, 3)),
+            ChessPiece("peon_plata_1_2", PieceType.PEON, PieceColor.PLATA, Position(1, 2)),
+            ChessPiece("torre_plata_0_3", PieceType.TORRE, PieceColor.PLATA, Position(0, 3)),
+            ChessPiece("rey_plata_0_1", PieceType.REY, PieceColor.PLATA, Position(0, 1))
+        ), turnoInicial = PieceColor.ORO,
+            listOf(MovimientoSolucion(Position(4, 0), Position(2, 2))),
+            acertijo = "¿Cuánto es 9 x 9 - 6 ", respuestaAcertijo = "75", maxPasos = 3),
+
+        72 to NivelConfig(id = 72, size = 6, piezas = listOf(
+            ChessPiece("torre_oro_5_4", PieceType.TORRE, PieceColor.ORO, Position(5, 4)),
+            ChessPiece("torre_oro_5_2", PieceType.TORRE, PieceColor.ORO, Position(5, 2)),
+            ChessPiece("caballo_oro_3_0", PieceType.CABALLO, PieceColor.ORO, Position(3, 0)),
+            ChessPiece("reina_oro_2_2", PieceType.REINA, PieceColor.ORO, Position(2, 2)),
+            ChessPiece("peon_plata_2_0", PieceType.PEON, PieceColor.PLATA, Position(2, 0)),
+            ChessPiece("peon_plata_2_1", PieceType.PEON, PieceColor.PLATA, Position(2, 1)),
+            ChessPiece("peon_plata_1_2", PieceType.PEON, PieceColor.PLATA, Position(1, 2)),
+            ChessPiece("peon_plata_3_3", PieceType.PEON, PieceColor.PLATA, Position(3, 3)),
+            ChessPiece("torre_plata_0_1", PieceType.TORRE, PieceColor.PLATA, Position(0, 1)),
+            ChessPiece("torre_plata_1_3", PieceType.TORRE, PieceColor.PLATA, Position(1, 3)),
+            ChessPiece("alfil_plata_3_2", PieceType.ALFIL, PieceColor.PLATA, Position(3, 2)),
+            ChessPiece("rey_plata_1_0", PieceType.REY, PieceColor.PLATA, Position(1, 0))
+        ), turnoInicial = PieceColor.ORO,
+            listOf(MovimientoSolucion(Position(2, 2), Position(1, 1))),
+            acertijo = "¿Cuánto es 9 x 6 - 8 ", respuestaAcertijo = "46", maxPasos = 5),
+        73 to NivelConfig(id = 73, size = 6, piezas = listOf(
+            ChessPiece("torre_oro_5_1", PieceType.TORRE, PieceColor.ORO, Position(5, 1)),
+            ChessPiece("torre_oro_4_3", PieceType.TORRE, PieceColor.ORO, Position(4, 3)),
+            ChessPiece("reina_oro_4_0", PieceType.REINA, PieceColor.ORO, Position(4, 0)),
+            ChessPiece("rey_plata_1_0", PieceType.REY, PieceColor.PLATA, Position(1, 0)),
+            ChessPiece("alfil_plata_2_0", PieceType.ALFIL, PieceColor.PLATA, Position(2, 0)),
+            ChessPiece("peon_plata_2_3", PieceType.PEON, PieceColor.PLATA, Position(2, 3)),
+            ChessPiece("peon_plata_1_2", PieceType.PEON, PieceColor.PLATA, Position(1, 2))
+        ), turnoInicial = PieceColor.ORO,
+            listOf(MovimientoSolucion(Position(4, 0), Position(2, 0))),
+            acertijo = "¿Cuánto es 7 x 9 - 7 ", respuestaAcertijo = "56", maxPasos = 2),
+
     )
 
 fun generarSetupPorDefecto(size: Int): List<ChessPiece> {

@@ -29,9 +29,12 @@ class BoardViewModel : ViewModel() {
     // 1. Esta función es la que llamas desde el SelectorNivelesScreen
     fun cargarPartida(nivelId: Int) {
         indicePistaActual = 0
+        // Asegúrate de que esto obtenga el objeto recién definido
         val config = NivelRepository.totalNiveles[nivelId]
 
         if (config != null) {
+            // MUY IMPORTANTE: Asegúrate de que configurarPartida no esté
+            // reseteando los pasos a un valor fijo diferente.
             configurarPartida(config.size, GameMode.PUZZLE)
 
             _gameState.update { it.copy(
@@ -40,8 +43,7 @@ class BoardViewModel : ViewModel() {
                 currentTurn = config.turnoInicial,
                 boardSize = config.size,
 
-                // --- AQUÍ ESTÁ LA CORRECCIÓN ---
-                // Leemos los pasos reales del repositorio o ponemos 4 si es nulo
+                // Forzamos el valor fresco desde la config
                 maxPasosConfigurado = config.maxPasos,
 
                 mensajeError = null,
@@ -911,6 +913,7 @@ class BoardViewModel : ViewModel() {
             40 -> R.raw.video_felicitacion_40
             50 -> R.raw.video_felicitacion_50
             60 -> R.raw.video_felicitacion_60
+            70 -> R.raw.video_felicitacion_70
             else -> null
         }
 
