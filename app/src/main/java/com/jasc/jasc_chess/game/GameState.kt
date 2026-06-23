@@ -66,5 +66,7 @@ data class GameState(
     val videoEventoPendiente: Int? = null,
     val mensajeError: String? = null,
     val dialogoAcertijoVisible: Boolean = false,
+    val casillaDestinoPista: Position? = null,
+    val menuAyudaVisible: Boolean = false, // <--- AGREGA ESTO
     val codigoGeneradoVisible: String? = null
 )

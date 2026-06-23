@@ -6,33 +6,49 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
-
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import com.jasc.jasc_chess.game.BoardViewModel
 import com.jasc.jasc_chess.data.local.PreferencesManager
-import com.jasc.jasc_chess.data.local.NivelRepository // <--- ESTO FALTA
-import androidx.compose.foundation.shape.RoundedCornerShape // <-- IMPORTACIÓN NECESARIA
-import androidx.compose.runtime.mutableIntStateOf // <-- OPTIMIZACIÓN
+import com.jasc.jasc_chess.data.local.NivelRepository
 
 @Composable
 fun SelectorNivelesScreen(navController: NavController, viewModel: BoardViewModel) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Usamos 'remember' con 'mutableIntStateOf' para mantener los valores
-    val nivelMaximo = remember { mutableIntStateOf(PreferencesManager.obtenerNivelMaximo(context)) }
-    val puntosTotales = remember { mutableIntStateOf(PreferencesManager.obtenerPuntos(context)) }
+    var puntosTotales by remember { mutableIntStateOf(0) }
+    var nivelMaximo by remember { mutableIntStateOf(0) }
+
+    // Este efecto asegura que al volver de otra pantalla (ej. Juego),
+    // se refresquen los valores desde PreferencesManager.
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                puntosTotales = PreferencesManager.obtenerPuntos(context)
+                nivelMaximo = PreferencesManager.obtenerNivelMaximo(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0F172A))) {
         // Header de Puntos
@@ -46,7 +62,7 @@ fun SelectorNivelesScreen(navController: NavController, viewModel: BoardViewMode
                 border = BorderStroke(1.dp, Color.Yellow)
             ) {
                 Text(
-                    text = "💰 PUNTOS: ${puntosTotales.intValue}",
+                    text = "💰 PUNTOS: $puntosTotales",
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     color = Color.Yellow,
                     fontWeight = FontWeight.Bold,
@@ -68,8 +84,8 @@ fun SelectorNivelesScreen(navController: NavController, viewModel: BoardViewMode
 
             items(NivelRepository.totalNiveles.size) { index ->
                 val nivel = index + 1
-                val estaDesbloqueado = nivel <= nivelMaximo.intValue
-                val estaCompletado = nivel < nivelMaximo.intValue
+                val estaDesbloqueado = nivel <= nivelMaximo
+                val estaCompletado = nivel < nivelMaximo
 
                 val horizontalPadding = when (index % 4) {
                     1 -> 100.dp
@@ -84,17 +100,12 @@ fun SelectorNivelesScreen(navController: NavController, viewModel: BoardViewMode
                     modifier = Modifier.offset(x = horizontalPadding),
                     onClick = {
                         if (estaDesbloqueado) {
-                            // IMPORTANTE: Al llamar a cargarPartida, el ViewModel ya
-                            // actualiza el State con maxPasosConfigurado y el nivel correcto.
                             viewModel.cargarPartida(nivel)
-
-                            // Navegamos inmediatamente después.
                             navController.navigate("juego")
                         }
                     }
                 )
 
-                // Conector visual entre niveles
                 if (nivel < NivelRepository.totalNiveles.size) {
                     Box(
                         modifier = Modifier
@@ -107,7 +118,6 @@ fun SelectorNivelesScreen(navController: NavController, viewModel: BoardViewMode
         }
     }
 }
-
 @Composable
 fun NivelNode(
     nivel: Int,

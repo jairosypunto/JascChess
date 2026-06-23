@@ -306,22 +306,37 @@ fun GameScreen(
             if (gameState.dialogoAcertijoVisible) {
                 var respuestaUsuario by remember { mutableStateOf("") }
                 AlertDialog(
-                    onDismissRequest = { viewModel.cerrarDialogoAcertijo(); respuestaUsuario = "" },
-                    title = { Text("¡Acertijo!", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
+                    onDismissRequest = { viewModel.cerrarDialogoAyuda() }, // <--- Llamamos a la limpieza
+                    title = { Text("¡Ayuda Disponible!", fontWeight = FontWeight.Bold) },
                     text = {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(text = gameState.acertijoActual ?: "¿Cuál es la respuesta?", style = MaterialTheme.typography.bodyMedium)
+                            // AQUÍ INFORMAMOS EL COSTO
+                            Text(text = "¿Deseas gastar 20 puntos para obtener esta pista?", color = Color.Gray)
+                            Text(text = gameState.acertijoActual ?: "", fontWeight = FontWeight.Bold)
+
                             if (gameState.mensajeError != null) {
-                                Text(text = gameState.mensajeError!!, style = MaterialTheme.typography.bodySmall, color = Color.Red, fontWeight = FontWeight.Bold)
+                                Text(text = gameState.mensajeError!!, color = Color.Red, fontSize = 12.sp)
                             }
-                            TextField(value = respuestaUsuario, onValueChange = { respuestaUsuario = it }, label = { Text("Respuesta") }, modifier = Modifier.fillMaxWidth().height(55.dp), singleLine = true)
+
+                            TextField(
+                                value = respuestaUsuario,
+                                onValueChange = { respuestaUsuario = it },
+                                label = { Text("Respuesta") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
                     },
                     confirmButton = {
-                        TextButton(onClick = { viewModel.verificarRespuestaAcertijo(respuestaUsuario); respuestaUsuario = "" }) { Text("Validar") }
+                        TextButton(onClick = {
+                            viewModel.verificarRespuestaAcertijo(respuestaUsuario)
+                            respuestaUsuario = ""
+                        }) { Text("Validar y Cobrar") }
                     },
                     dismissButton = {
-                        TextButton(onClick = { viewModel.cerrarDialogoAcertijo(); respuestaUsuario = "" }) { Text("✕") }
+                        TextButton(onClick = {
+                            viewModel.cerrarDialogoAyuda() // <--- Llamamos a la limpieza
+                            respuestaUsuario = ""
+                        }) { Text("Cancelar") }
                     }
                 )
             }

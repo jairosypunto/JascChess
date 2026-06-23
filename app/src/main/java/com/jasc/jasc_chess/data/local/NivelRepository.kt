@@ -6,7 +6,6 @@ import com.jasc.jasc_chess.model.ChessPiece
 import com.jasc.jasc_chess.model.PieceColor
 import com.jasc.jasc_chess.model.MovimientoSolucion // IMPORTA SOLO ESTA
 
-data class MovimientoSolucion(val desde: Position, val hacia: Position)
 
 data class NivelConfig(
     val id: Int,
@@ -23,7 +22,7 @@ data class NivelConfig(
 object NivelRepository {
 
     val totalNiveles = mutableMapOf<Int, NivelConfig>(
-        1 to NivelConfig(9, 4, listOf(
+        1 to NivelConfig(1, 4, listOf(
             ChessPiece("n1_k", PieceType.REY, PieceColor.PLATA, Position(0, 1)),
             ChessPiece("n1_a", PieceType.ALFIL, PieceColor.PLATA, Position(1, 2)),
             ChessPiece("n1_q", PieceType.REINA, PieceColor.PLATA, Position(2, 0)),
@@ -162,7 +161,7 @@ object NivelRepository {
             ChessPiece("n1_p", PieceType.PEON, PieceColor.PLATA, Position(1, 0)),
             ChessPiece("n2_t", PieceType.REINA, PieceColor.PLATA, Position(2, 2))
         ), PieceColor.ORO,
-            listOf(MovimientoSolucion(Position(2, 0), Position(0, 2))),
+            listOf(MovimientoSolucion(Position(2, 0), Position(2, 2))),
             "¿Cuánto es 7 x 9 ?",
             "63", 2),
 
@@ -253,7 +252,7 @@ object NivelRepository {
             ChessPiece("peon_oro_3_4", PieceType.PEON, PieceColor.ORO, Position(3, 4)),
             ChessPiece("reina_oro_2_4", PieceType.REINA, PieceColor.ORO, Position(2, 4))
         ), turnoInicial = PieceColor.ORO,
-            listOf(MovimientoSolucion(Position(2, 4), Position(2, 1))),
+            listOf(MovimientoSolucion(Position(2, 4), Position(5, 1))),
             acertijo = "¿Cuánto es 7 x 5 ?", respuestaAcertijo = "35", maxPasos = 2),
 
         20 to NivelConfig(id = 20, size = 4, piezas = listOf(
@@ -296,7 +295,7 @@ object NivelRepository {
             ChessPiece("reina_oro_2_3", PieceType.REINA, PieceColor.ORO, Position(2, 3))
         ), turnoInicial = PieceColor.ORO,
             secuenciaSolucion = listOf(MovimientoSolucion(Position(2, 3), Position(1, 4))),
-            acertijo = "cuantas piezas trae un tablero de ajedrez", respuestaAcertijo = "32", maxPasos = 2),
+            acertijo = "cuantas piezas trae un tablero de ajedrez", respuestaAcertijo = "64", maxPasos = 2),
 
         23 to NivelConfig(id = 23, size = 5, piezas = listOf(
             ChessPiece("peon_plata_1_2", PieceType.PEON, PieceColor.PLATA, Position(1, 2)),
@@ -977,6 +976,33 @@ object NivelRepository {
             listOf(MovimientoSolucion(Position(4, 0), Position(2, 0))),
             acertijo = "¿Cuánto es 7 x 9 - 7 ", respuestaAcertijo = "56", maxPasos = 2),
 
+        74 to NivelConfig(id = 74, size = 6, piezas = listOf(
+            ChessPiece("peon_plata_3_4", PieceType.PEON, PieceColor.PLATA, Position(3, 4)),
+            ChessPiece("peon_plata_2_4", PieceType.PEON, PieceColor.PLATA, Position(2, 4)),
+            ChessPiece("peon_plata_1_4", PieceType.PEON, PieceColor.PLATA, Position(1, 4)),
+            ChessPiece("rey_plata_1_5", PieceType.REY, PieceColor.PLATA, Position(1, 5)),
+            ChessPiece("caballo_plata_0_5", PieceType.CABALLO, PieceColor.PLATA, Position(0, 5)),
+            ChessPiece("peon_plata_0_0", PieceType.PEON, PieceColor.PLATA, Position(0, 0)),
+            ChessPiece("peon_oro_3_5", PieceType.PEON, PieceColor.ORO, Position(3, 5)),
+            ChessPiece("torre_oro_0_1", PieceType.TORRE, PieceColor.ORO, Position(0, 1)),
+            ChessPiece("torre_oro_1_1", PieceType.TORRE, PieceColor.ORO, Position(1, 1)),
+            ChessPiece("alfil_oro_4_2", PieceType.ALFIL, PieceColor.ORO, Position(4, 2))
+        ), turnoInicial = PieceColor.ORO,
+            listOf(MovimientoSolucion(Position(0, 1), Position(0, 5))),
+            acertijo = "¿Cuánto es 3 x 9 - 7 ", respuestaAcertijo = "20", maxPasos = 4),
+
+        75 to NivelConfig(id = 75, size = 6, piezas = listOf(
+            ChessPiece("rey_plata_0_5", PieceType.REY, PieceColor.PLATA, Position(0, 5)),
+            ChessPiece("peon_plata_2_5", PieceType.PEON, PieceColor.PLATA, Position(2, 5)),
+            ChessPiece("peon_plata_1_4", PieceType.PEON, PieceColor.PLATA, Position(1, 4)),
+            ChessPiece("peon_plata_1_3", PieceType.PEON, PieceColor.PLATA, Position(1, 3)),
+            ChessPiece("torre_plata_0_3", PieceType.TORRE, PieceColor.PLATA, Position(0, 3)),
+            ChessPiece("alfil_oro_3_2", PieceType.ALFIL, PieceColor.ORO, Position(3, 2)),
+            ChessPiece("reina_oro_4_3", PieceType.REINA, PieceColor.ORO, Position(4, 3))
+        ), turnoInicial = PieceColor.ORO,
+            listOf(MovimientoSolucion(Position(4, 3), Position(2, 5))),
+            acertijo = "¿Cuánto es 3 x 8 - 7 ", respuestaAcertijo = "17", maxPasos = 2),
+
     )
 
 fun generarSetupPorDefecto(size: Int): List<ChessPiece> {
@@ -1008,9 +1034,14 @@ fun generarSetupProfesional(size: Int): List<ChessPiece> {
     return piezas
 }
 
-fun guardarNivel(config: NivelConfig) {
-    totalNiveles[config.id] = config
-}
+    fun guardarNivel(config: NivelConfig) {
+        if (totalNiveles.containsKey(config.id)) {
+            // Puedes lanzar una excepción o simplemente loguear el error
+            android.util.Log.e("NivelRepository", "Error: El nivel ${config.id} ya existe.")
+            return
+        }
+        totalNiveles[config.id] = config
+    }
 
 fun obtenerNivel(id: Int): NivelConfig? {
     return totalNiveles[id]

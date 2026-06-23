@@ -2,6 +2,7 @@ package com.jasc.jasc_chess.data.local
 
 import android.content.Context
 import android.util.Log
+
 object PreferencesManager {
     private const val PREFS_NAME = "JascChessPrefs"
     private const val KEY_NIVEL_MAXIMO = "nivel_maximo"
@@ -18,11 +19,16 @@ object PreferencesManager {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_NIVEL_MAXIMO, 1)
     }
 
-    fun guardarPuntos(puntosNuevos: Int, context: Context) {
-        Log.d("JascChess", "Guardando $puntosNuevos puntos...") // <--- ESTO
+    // Acepta valores positivos (sumar) o negativos (cobrar/restar)
+    fun guardarPuntos(puntosCambio: Int, context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val actuales = obtenerPuntos(context)
-        prefs.edit().putInt(KEY_PUNTOS, actuales + puntosNuevos).apply()
+        val actuales = prefs.getInt(KEY_PUNTOS, 0)
+
+        var nuevoTotal = actuales + puntosCambio
+        if (nuevoTotal < 0) nuevoTotal = 0
+
+        prefs.edit().putInt(KEY_PUNTOS, nuevoTotal).apply()
+        Log.d("JascChess", "Puntos: $actuales -> $nuevoTotal (Cambio: $puntosCambio)")
     }
 
     fun obtenerPuntos(context: Context): Int {

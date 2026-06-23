@@ -52,7 +52,90 @@ class BoardViewModel : ViewModel() {
             )}
         }
     }
+    private fun procesarFinDeNivel(nivel: Int) {
+        val context = _appContext ?: return
 
+        // 1. Guardamos la recompensa (100 puntos)
+        PreferencesManager.guardarPuntos(100, context)
+
+        // 2. Leemos el total actualizado directamente del Manager
+        val totalReal = PreferencesManager.obtenerPuntos(context)
+
+        val esNivelEspecial = (nivel % 10 == 0)
+        val videoAsignado = when (nivel) {
+            10 -> R.raw.video_felicitacion_10
+            20 -> R.raw.video_felicitacion_20
+            30 -> R.raw.video_felicitacion_30
+            40 -> R.raw.video_felicitacion_40
+            50 -> R.raw.video_felicitacion_50
+            60 -> R.raw.video_felicitacion_60
+            70 -> R.raw.video_felicitacion_70
+            else -> null
+        }
+
+        _gameState.update {
+            it.copy(
+                puntosTotales = totalReal,
+                videoEventoPendiente = videoAsignado
+            )
+        }
+
+        if (!esNivelEspecial) {
+            val mensaje = obtenerMensajeDeRecompensa(totalReal)
+            if (mensaje != null) {
+                _gameState.update { it.copy(mensajeError = mensaje) }
+                viewModelScope.launch {
+                    delay(3000)
+                    _gameState.update { it.copy(mensajeError = null) }
+                }
+            }
+        }
+    }
+
+    fun verificarRespuestaAcertijo(respuesta: String) {
+        val context = _appContext ?: return // Asegúrate de tener este contexto
+        val nivelActual = NivelRepository.obtenerNivel(_gameState.value.nivelActualInt) ?: return
+
+        // 1. Validamos la respuesta primero
+        if (respuesta.trim().equals(nivelActual.respuestaAcertijo, ignoreCase = true)) {
+
+            // 2. Aquí es donde se hace el cobro de los 20 puntos
+            // Llamamos al manager para que reste 20
+            PreferencesManager.guardarPuntos(-20, context)
+            val nuevoTotal = PreferencesManager.obtenerPuntos(context)
+
+            _gameState.update { currentState ->
+                // Si ya hay pista, la apagamos
+                if (currentState.casillaPista != null) {
+                    currentState.copy(
+                        puntosTotales = nuevoTotal, // Actualizamos el saldo
+                        pistaBloqueada = false,
+                        dialogoAcertijoVisible = false,
+                        casillaPista = null,
+                        mensajeError = null
+                    )
+                } else {
+                    // Si no hay pista, buscamos la siguiente
+                    val movimiento = nivelActual.secuenciaSolucion.getOrNull(indicePistaActual)
+                    if (movimiento != null) {
+                        indicePistaActual++
+                        currentState.copy(
+                            puntosTotales = nuevoTotal, // Actualizamos el saldo
+                            pistaBloqueada = false,
+                            dialogoAcertijoVisible = false,
+                            casillaPista = movimiento.desde,
+                            mensajeError = null
+                        )
+                    } else {
+                        currentState.copy(mensajeError = "No hay más pistas disponibles.")
+                    }
+                }
+            }
+        } else {
+            // Respuesta incorrecta
+            _gameState.update { it.copy(mensajeError = "Incorrecto, intenta de nuevo.") }
+        }
+    }
     fun activarModoEdicion() {
         vaciarTablero()
         // Activamos modo edición dentro del flujo de estado
@@ -69,57 +152,56 @@ class BoardViewModel : ViewModel() {
         }
     }
 
+    // Esta es la función que ya llamas con tu botón "PISTA"
     fun obtenerPistaAyuda() {
+        val context = _appContext ?: return
         val nivelActual = NivelRepository.obtenerNivel(_gameState.value.nivelActualInt) ?: return
 
-        // 1. Si ya hay bloqueo activo, solo mostramos el diálogo
+        // Si ya está bloqueado, solo abrimos el diálogo existente
         if (_gameState.value.pistaBloqueada) {
             _gameState.update { it.copy(dialogoAcertijoVisible = true) }
             return
         }
 
-        // 2. Si NO hay bloqueo, verificamos si aún hay pistas disponibles
-        if (indicePistaActual < nivelActual.secuenciaSolucion.size) {
+        // Validación de saldo
+        val puntosActuales = PreferencesManager.obtenerPuntos(context)
+        if (puntosActuales < 20) {
+            _gameState.update { it.copy(mensajeError = "No tienes suficientes puntos (20 requeridos).") }
+            // Aquí no bloqueamos, el usuario no puede proceder
+            return
+        }
 
-            // CORRECCIÓN AQUÍ:
-            // No pintamos la pista todavía. Primero activamos el bloqueo y el diálogo.
-            // El usuario DEBE validar el acertijo para que la pista se pinte.
-            _gameState.update {
-                it.copy(
-                    pistaBloqueada = true,
-                    dialogoAcertijoVisible = true,
-                    acertijoActual = nivelActual.acertijo
-                )
-            }
+        // Si tiene saldo, bloqueamos y mostramos el diálogo
+        _gameState.update {
+            it.copy(
+                pistaBloqueada = true,
+                dialogoAcertijoVisible = true,
+                acertijoActual = nivelActual.acertijo
+                // Quitamos el mensajeError de aquí para no ensuciar la lógica
+            )
         }
     }
 
-    fun verificarRespuestaAcertijo(respuesta: String) {
-        val nivelActual = NivelRepository.obtenerNivel(_gameState.value.nivelActualInt) ?: return
-
-        if (respuesta.trim().equals(nivelActual.respuestaAcertijo, ignoreCase = true)) {
-            // Obtenemos la pista que estaba pendiente
-            val movimiento = nivelActual.secuenciaSolucion[indicePistaActual]
-            indicePistaActual++ // Avanzamos el índice aquí, al acertar
-
-            _gameState.update {
-                it.copy(
-                    pistaBloqueada = false,
-                    dialogoAcertijoVisible = false,
-                    casillaPista = movimiento.desde, // PINTA LA PISTA AQUÍ
-                    mensajeError = null
-                )
-            }
-        } else {
-            _gameState.update { it.copy(mensajeError = "Incorrecto, intenta de nuevo.") }
+    // ESTA es la función que debes llamar desde el botón "✕" o "Cerrar" de tu AlertDialog
+    fun cerrarDialogoAyuda() {
+        _gameState.update {
+            it.copy(
+                dialogoAcertijoVisible = false,
+                pistaBloqueada = false, // Liberamos el bloqueo
+                mensajeError = null
+            )
         }
     }
-
     fun obtenerMensajeDeRecompensa(puntos: Int): String? {
         return when {
+            // Rangos de 500 en 500
+            puntos >= 500 && puntos < 600 -> "¡Buen comienzo! 500 puntos, vas por muy buen camino."
             puntos >= 1000 && puntos < 1100 -> "¡Felicidades! Has alcanzado los 1000 puntos. ¡Eres un estratega nato!"
+            puntos >= 1500 && puntos < 1600 -> "¡Increíble! 1500 puntos. ¡Tu mente lógica no tiene límites!"
+            puntos >= 2000 && puntos < 2100 -> "¡Maestro! 2000 puntos. ¡El ajedrez es tu lenguaje natural!"
             puntos >= 2500 && puntos < 2600 -> "¡Impresionante! 2500 puntos. ¡El dominio del tablero es tuyo!"
-            // Puedes añadir más hitos aquí
+            puntos >= 3000 && puntos < 3100 -> "¡Legendario! 3000 puntos. ¡Has alcanzado un nivel de élite!"
+
             else -> null
         }
     }
@@ -472,6 +554,7 @@ class BoardViewModel : ViewModel() {
     fun alternarModoTiempo() {
         _gameState.update { it.copy(modoTiempoActivado = !it.modoTiempoActivado) }
     }
+
     fun cambiarDificultad() {
         _gameState.update { it.copy(nivelActual = when(it.nivelActual) {
             NivelDificultad.PRINCIPIANTE -> NivelDificultad.INTERMEDIO
@@ -479,6 +562,7 @@ class BoardViewModel : ViewModel() {
             else -> NivelDificultad.PRINCIPIANTE
         })}
     }
+
     fun cambiarTema() { _gameState.update { it.copy(temaActual = (it.temaActual + 1) % 8) } }
     private fun cambiarNivel(n: Int) {
         val config = NivelRepository.obtenerNivel(n)
@@ -644,8 +728,6 @@ class BoardViewModel : ViewModel() {
         }
     }
 
-// --- BLOQUE CORREGIDO: VALIDACIÓN Y DESPLAZAMIENTO PROFESIONAL ---
-
     fun validarJugadaPuzzle(origen: Position, destino: Position) {
         val state = _gameState.value
         val piezaMoviendose = state.pieces.find { it.position == origen } ?: return
@@ -798,7 +880,6 @@ class BoardViewModel : ViewModel() {
         }
     }
 
-    // 1. EJECUCIÓN DE RESPUESTA IA (ESPECÍFICA PARA PUZZLES)
     private fun ejecutarRespuestaIA(puzzle: ChessPuzzle) {
         viewModelScope.launch {
             delay(600)
@@ -893,60 +974,15 @@ class BoardViewModel : ViewModel() {
     fun setContext(context: Context) {
         _appContext = context.applicationContext
     }
-    private fun procesarFinDeNivel(nivel: Int) {
-        val context = _appContext ?: return
-
-        val puntosPorNivel = 100
-        val puntosActuales = _gameState.value.puntosTotales
-        val nuevosPuntos = puntosActuales + puntosPorNivel
-
-        PreferencesManager.guardarPuntos(puntosPorNivel, context)
-
-        // Lógica dinámica para seleccionar el video según el nivel
-        val esNivelEspecial = (nivel % 10 == 0)
-
-        // Asignamos el recurso dinámicamente usando un 'when'
-        val videoAsignado = when (nivel) {
-            10 -> R.raw.video_felicitacion_10
-            20 -> R.raw.video_felicitacion_20
-            30 -> R.raw.video_felicitacion_30 // <--- Aquí ya cargará el del 30
-            40 -> R.raw.video_felicitacion_40
-            50 -> R.raw.video_felicitacion_50
-            60 -> R.raw.video_felicitacion_60
-            70 -> R.raw.video_felicitacion_70
-            else -> null
-        }
-
-        _gameState.update {
-            it.copy(
-                puntosTotales = nuevosPuntos,
-                videoEventoPendiente = videoAsignado // Usamos la variable dinámica
-            )
-        }
-
-        if (!esNivelEspecial) {
-            val mensaje = obtenerMensajeDeRecompensa(nuevosPuntos)
-            if (mensaje != null) {
-                _gameState.update { it.copy(mensajeError = mensaje) }
-                viewModelScope.launch {
-                    delay(3000)
-                    _gameState.update { it.copy(mensajeError = null) }
-                }
-            }
-        }
-    }
-
 
     fun guardarProgresoFinal(context: Context) {
         PreferencesManager.guardarPuntos(puntosAcumuladosEnSesion, context)
         puntosAcumuladosEnSesion = 0 // Reiniciamos el contador de sesión
     }
 
-    // En BoardViewModel.kt
     fun limpiarVideoEvento() {
         _gameState.update { it.copy(videoEventoPendiente = null) }
     }
-
 
     fun reiniciarTodoElProgreso() {
         _gameState.update {
