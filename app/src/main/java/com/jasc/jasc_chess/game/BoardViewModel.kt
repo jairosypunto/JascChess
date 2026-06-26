@@ -28,27 +28,77 @@ class BoardViewModel : ViewModel() {
     // 1. Esta función es la que llamas desde el SelectorNivelesScreen
     fun cargarPartida(nivelId: Int) {
         indicePistaActual = 0
-        // Asegúrate de que esto obtenga el objeto recién definido
-        val config = NivelRepository.totalNiveles[nivelId]
+        iniciarModoCamaleon(GameMode.PUZZLE, nivelId)
+    }
 
-        if (config != null) {
-            // MUY IMPORTANTE: Asegúrate de que configurarPartida no esté
-            // reseteando los pasos a un valor fijo diferente.
-            configurarPartida(config.size, GameMode.PUZZLE)
+    fun cargarModo(size: Int, modo: GameMode, puzzle: ChessPuzzle?, nivel: Int = 0) {
+        // Si es libre, ignoramos el nivel, si es puzzle, usamos el ID
+        if (modo == GameMode.LIBRE) {
+            iniciarModoCamaleon(GameMode.LIBRE)
+        } else {
+            iniciarModoCamaleon(GameMode.PUZZLE, nivel, puzzle)
+        }
+    }
 
-            _gameState.update { it.copy(
-                pieces = config.piezas,
-                nivelActualInt = nivelId,
-                currentTurn = config.turnoInicial,
-                boardSize = config.size,
+    /**
+     * Tablero Camaleón: Único punto de entrada para configurar el estado de la partida.
+     * Centraliza la lógica de inicialización para eliminar conflictos de estado.
+     */
+    fun iniciarModoCamaleon(modo: GameMode, nivelId: Int? = null, puzzle: ChessPuzzle? = null) {
+        Log.d("JASC_CAMALEON", "Iniciando modo: $modo, nivel: $nivelId")
 
-                // Forzamos el valor fresco desde la config
-                maxPasosConfigurado = config.maxPasos,
-
-                mensajeError = null,
-                esJuegoBloqueado = false,
-                puzzleStepIndex = 0
-            )}
+        when (modo) {
+            GameMode.PUZZLE -> {
+                nivelId?.let { id ->
+                    val config = NivelRepository.obtenerNivel(id)
+                    config?.let {
+                        _gameState.update { s ->
+                            s.copy(
+                                modoJuego = GameMode.PUZZLE,
+                                nivelActualInt = id,
+                                pieces = it.piezas,
+                                boardSize = it.size,
+                                currentPuzzle = puzzle,
+                                // Objetivo fresco desde la configuración del nivel
+                                objetivoPuzzle = it.mensajeTactico,
+                                maxPasosConfigurado = it.maxPasos,
+                                currentTurn = it.turnoInicial,
+                                puzzleStepIndex = 0,
+                                selectedPosition = null,
+                                validMoves = emptyList(),
+                                historialTableros = listOf(it.piezas),
+                                esJaqueMate = false,
+                                esTablas = false,
+                                esAhogado = false,
+                                ganador = null,
+                                mensajeError = null,
+                                esJuegoBloqueado = false
+                            )
+                        }
+                    }
+                }
+            }
+            GameMode.LIBRE -> {
+                val piezasLibre = generarSetupEstandar8x8()
+                _gameState.update { s ->
+                    s.copy(
+                        modoJuego = GameMode.LIBRE,
+                        pieces = piezasLibre,
+                        boardSize = 8,
+                        objetivoPuzzle = "Juego Libre: ¡Derrota al rey enemigo!",
+                        maxPasosConfigurado = 0,
+                        puzzleStepIndex = 0,
+                        historialTableros = listOf(piezasLibre),
+                        esJaqueMate = false,
+                        esTablas = false,
+                        esAhogado = false,
+                        ganador = null,
+                        selectedPosition = null,
+                        validMoves = emptyList()
+                    )
+                }
+            }
+            GameMode.MENU -> { /* Lógica de menú */ }
         }
     }
 
@@ -120,9 +170,6 @@ class BoardViewModel : ViewModel() {
 
     private var indicePistaActual = 0
 
-// En BoardViewModel.kt
-
-    // Función llamada al presionar el botón de ayuda en la UI
     fun obtenerPistaAyuda() {
         val context = _appContext ?: return
         val gameState = _gameState.value
@@ -152,7 +199,7 @@ class BoardViewModel : ViewModel() {
         _gameState.update { it.copy(pistaBloqueada = true, dialogoAcertijoVisible = true, acertijoActual = acertijoTexto) }
     }
 
-    // Dentro de BoardViewModel.kt
+
     fun debugCargarNivelDirecto(nivel: Int) {
         val config = NivelRepository.obtenerNivel(nivel)
         if (config != null) {
@@ -1137,39 +1184,6 @@ class BoardViewModel : ViewModel() {
             )}
         } else {
             Log.e("DEBUG_JASC", "El nivel $nivelAIniciar no existe en NivelRepository")
-        }
-    }
-    fun cargarModo(size: Int, modo: GameMode, puzzle: ChessPuzzle?, nivel: Int = 0) {
-        // CORRECCIÓN: Accedemos al mapa totalNiveles directamente
-        val config = if (modo != GameMode.LIBRE) NivelRepository.totalNiveles[nivel] else null
-        android.util.Log.d("DEBUG_JASC", "Nivel recibido: $nivel | Config encontrada: ${config != null} | maxPasos en repo: ${config?.maxPasos}")
-        val piezasNuevas = if (modo == GameMode.LIBRE) {
-            if (size == 8) generarSetupEstandar8x8() else NivelRepository.generarSetupPorDefecto(size)
-        } else {
-            // Si el nivel no existe en el mapa, usamos un fallback seguro
-            config?.piezas ?: generarPiezasParaModo(size, nivel)
-        }
-
-        _gameState.update { currentState ->
-            currentState.copy(
-                pieces = piezasNuevas,
-                boardSize = size,
-                modoJuego = modo,
-                currentPuzzle = puzzle,
-                nivelActualInt = nivel,
-
-                // ASIGNACIÓN CORRECTA
-                maxPasosConfigurado = config?.maxPasos ?: 4,
-                puzzleStepIndex = 0,
-
-                historialTableros = listOf(piezasNuevas),
-                esJaqueMate = false,
-                esTablas = false,
-                esAhogado = false,
-                ganador = null,
-                selectedPosition = null,
-                validMoves = emptyList()
-            )
         }
     }
 

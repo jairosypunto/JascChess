@@ -1,6 +1,6 @@
 package com.jasc.jasc_chess.game
 
-import android.util.Log
+
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -42,6 +42,9 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.unit.sp // Asegúrate de tener este para el .sp
 
 @Composable
 fun GameScreen(
@@ -194,6 +197,16 @@ fun GameScreen(
                         )
                     }
                 }
+
+                // Dentro de tu GameScreen, antes del Box del tablero:
+                Text(
+                    text = "OBJETIVO: ${gameState.objetivoPuzzle}",
+                    color = Color(0xFFE2E8F0), // Un tono un poco más suave que el blanco puro
+                    fontSize = 13.sp,
+                    fontStyle = FontStyle.Italic, // El itálico le da un toque táctico y elegante
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+
                 CementerioRow("IMPERIO (ORO): ", gameState.piezasComidasOro, gameState)
 
 // Tablero restaurado a tu lógica funcional original
@@ -388,23 +401,7 @@ fun GameScreen(
                 )
             }
 // 4. CÓDIGO GENERADO
-            if (gameState.codigoGeneradoVisible != null) {
-                AlertDialog(
-                    onDismissRequest = { viewModel.limpiarCodigoGenerado() },
-                    title = { Text("Código de Nivel Generado") },
-                    text = {
-                        // Al tener el import arriba, este bloque ya es aceptado por el compilador
-                        SelectionContainer {
-                            Text(text = gameState.codigoGeneradoVisible ?: "Sin código")
-                        }
-                    },
-                    confirmButton = {
-                        Button(onClick = { viewModel.limpiarCodigoGenerado() }) {
-                            Text("Cerrar")
-                        }
-                    }
-                )
-            }
+
             // 5. REY AHOGADO Y TABLAS
             if (gameState.esAhogado || gameState.esTablas) {
                 AlertDialog(

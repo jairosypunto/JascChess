@@ -69,5 +69,6 @@ data class GameState(
     val casillaDestinoPista: Position? = null,
     val menuAyudaVisible: Boolean = false, // <--- AGREGA ESTO
     val nivelAyudaEntregado: Int = 0,
-    val codigoGeneradoVisible: String? = null
+    val codigoGeneradoVisible: String? = null,
+    val objetivoPuzzle: String = "Prepárate para la batalla",
 )
