@@ -31,15 +31,12 @@ fun ChessPieceView(
     piece: ChessPiece,
     isSelected: Boolean,
     resId: Int?,
-    simbolo: String,
     modifier: Modifier = Modifier,
     esJaqueMate: Boolean = false,
     colorGanador: PieceColor? = null
 ) {
     val esReyCaido = (piece.type == PieceType.REY && esJaqueMate && piece.color != colorGanador)
 
-    // Ajuste específico: solo para los Reyes del estilo "tradicional" (sin sufijos)
-    // Usamos 1.1f para que el aumento sea suave y no se vea gigante
     val esReyTradicional = piece.type == PieceType.REY &&
             (resId == R.drawable.tradicional_rey_blanco || resId == R.drawable.tradicional_rey_negro)
 
@@ -78,8 +75,9 @@ fun ChessPieceView(
                 modifier = Modifier.fillMaxSize().then(transformModifier)
             )
         } else {
+            // CORRECCIÓN: Se eliminó la variable 'simbolo' y se usa un fallback lógico
             Text(
-                text = if (esReyCaido) "😵" else simbolo,
+                text = if (esReyCaido) "😵" else piece.type.name.first().toString(),
                 color = if (piece.color == PieceColor.ORO) Color(0xFFD4AF37) else Color(0xFFC0C0C0),
                 fontWeight = FontWeight.Bold,
                 fontSize = 32.sp,

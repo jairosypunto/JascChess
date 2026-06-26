@@ -1,7 +1,6 @@
 package com.jasc.jasc_chess.data.engine
 
 import com.jasc.jasc_chess.model.*
-import kotlin.random.Random
 
 object AIEngine {
 
@@ -18,7 +17,7 @@ object AIEngine {
         val depth = when(nivel) {
             NivelDificultad.PRINCIPIANTE -> 1
             NivelDificultad.INTERMEDIO -> 2
-            NivelDificultad.AVANZADO -> 4
+            NivelDificultad.AVANZADO -> 3
         }
 
         val aliadas = piezas.filter { it.color == PieceColor.PLATA }
@@ -28,10 +27,7 @@ object AIEngine {
 
         if (movimientosPosibles.isEmpty()) return null
 
-        var mejorMovimiento: Pair<ChessPiece, Position>? = null
         var maxEval = Int.MIN_VALUE
-
-        // Lista para guardar movimientos con el mismo valor máximo y elegir al azar
         val mejoresMovimientos = mutableListOf<Pair<ChessPiece, Position>>()
 
         for ((p, d) in movimientosPosibles) {
@@ -47,7 +43,6 @@ object AIEngine {
             }
         }
 
-        // Retornamos uno al azar entre los mejores para que no sea repetitiva
         return mejoresMovimientos.randomOrNull()
     }
 
@@ -57,24 +52,31 @@ object AIEngine {
         var a = alpha
         var b = beta
 
+        val colorTurno = if (isMax) PieceColor.PLATA else PieceColor.ORO
+        val todasLasPiezas = tablero.filter { it.color == colorTurno }
+
+        val movimientos = todasLasPiezas.flatMap { p ->
+            MoveValidator.obtenerMovimientosValidos(p, tablero, size).map { d ->
+                val captura = tablero.find { it.position == d }
+                val valorCaptura = if (captura != null) obtenerValorPieza(captura.type) else 0
+                Triple(p, d, valorCaptura)
+            }
+        }.sortedByDescending { it.third }
+
         if (isMax) {
             var maxE = Int.MIN_VALUE
-            for (p in tablero.filter { it.color == PieceColor.PLATA }) {
-                for (d in MoveValidator.obtenerMovimientosValidos(p, tablero, size)) {
-                    maxE = maxOf(maxE, minimax(simularMovimiento(p, d, tablero), depth - 1, false, a, b, size))
-                    a = maxOf(a, maxE)
-                    if (b <= a) break
-                }
+            for ((p, d, _) in movimientos) {
+                maxE = maxOf(maxE, minimax(simularMovimiento(p, d, tablero), depth - 1, false, a, b, size))
+                a = maxOf(a, maxE)
+                if (b <= a) break
             }
             return maxE
         } else {
             var minE = Int.MAX_VALUE
-            for (p in tablero.filter { it.color == PieceColor.ORO }) {
-                for (d in MoveValidator.obtenerMovimientosValidos(p, tablero, size)) {
-                    minE = minOf(minE, minimax(simularMovimiento(p, d, tablero), depth - 1, true, a, b, size))
-                    b = minOf(b, minE)
-                    if (b <= a) break
-                }
+            for ((p, d, _) in movimientos) {
+                minE = minOf(minE, minimax(simularMovimiento(p, d, tablero), depth - 1, true, a, b, size))
+                b = minOf(b, minE)
+                if (b <= a) break
             }
             return minE
         }
@@ -90,16 +92,13 @@ object AIEngine {
             // 1. Material
             score += (v * factor)
 
-            // 2. Penalización agresiva por estar bajo amenaza (evita suicidarse)
+            // 2. Penalización agresiva por estar bajo amenaza
             if (MoveValidator.esCasillaAmenazadaPorGeometria(p.position, if (esPlata) PieceColor.ORO else PieceColor.PLATA, piezas, size)) {
                 score -= (v / 2) * factor
             }
         }
 
         // 3. Seguridad del Rey
-        val reyPlata = piezas.find { it.type == PieceType.REY && it.color == PieceColor.PLATA }
-        val reyOro = piezas.find { it.type == PieceType.REY && it.color == PieceColor.ORO }
-
         if (estaElReyEnJaqueEnSimulacion(PieceColor.PLATA, piezas, size)) score -= 1000
         if (estaElReyEnJaqueEnSimulacion(PieceColor.ORO, piezas, size)) score += 1000
 

@@ -154,34 +154,60 @@ fun GameScreen(
                         modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
                     )
                 }
-// --- CABECERA DE NIVEL PROFESIONAL MUESTRA LOS NIVELES Y LOS PASOS---
+// --- CABECERA DE NIVEL PROFESIONAL ---
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp), // Reducido de 16.dp a 8.dp
-                    horizontalArrangement = Arrangement.Center,
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween, // Esto pone uno a la izquierda y otro a la derecha
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    // Columna izquierda: Nivel y Pasos
+                    Column(horizontalAlignment = Alignment.Start) {
                         Text(
                             text = "LEVEL ${gameState.nivelActualInt}",
-                            fontSize = 11.sp, // Reducido para ser más sutil
+                            fontSize = 11.sp,
                             color = Color.White.copy(alpha = 0.5f),
                             fontWeight = FontWeight.Bold
                         )
-                        // Eliminamos el Spacer gigante y ponemos el texto
                         Text(
                             text = "Mate in ${gameState.maxPasosConfigurado}",
-                            fontSize = 24.sp, // Reducido de 36.sp para ganar espacio
+                            fontSize = 22.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFFFFD700) // Dorado para resaltar
+                            color = Color(0xFFFFD700)
+                        )
+                    }
+
+                    // Columna derecha: Puntaje acumulado
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "SCORE",
+                            fontSize = 11.sp,
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "${gameState.puntosTotales}",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.Cyan // Puedes usar un color diferente para diferenciarlo del oro del mate
                         )
                     }
                 }
                 CementerioRow("IMPERIO (ORO): ", gameState.piezasComidasOro, gameState)
 
-                // Tablero
-                Box(modifier = Modifier.padding(horizontal = 1.dp, vertical = 1.dp).fillMaxWidth().aspectRatio(1f).shadow(20.dp, RoundedCornerShape(6.dp)).background(Color(0xFF4A2E1B)).border(4.dp, Color(0xFF2D1B10), RoundedCornerShape(6.dp)).padding(start = 4.dp, end = 4.dp, bottom = 4.dp, top = 12.dp), contentAlignment = Alignment.Center) {
+// Tablero restaurado a tu lógica funcional original
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 1.dp, vertical = 1.dp)
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .shadow(20.dp, RoundedCornerShape(6.dp))
+                        .background(Color(0xFF4A2E1B))
+                        .border(4.dp, Color(0xFF2D1B10), RoundedCornerShape(6.dp))
+                        .padding(start = 4.dp, end = 4.dp, bottom = 4.dp, top = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     Row(modifier = Modifier.fillMaxSize()) {
                         Column(modifier = Modifier.fillMaxHeight().width(12.dp).padding(vertical = 4.dp), verticalArrangement = Arrangement.SpaceAround, horizontalAlignment = Alignment.CenterHorizontally) {
                             for (i in gameState.boardSize downTo 1) Text(text = i.toString(), color = Color(0xFFE2E8F0), fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -192,10 +218,16 @@ fun GameScreen(
                                     for (col in 0 until gameState.boardSize) {
                                         val currentPos = Position(row, col)
                                         CasillaView(currentPos, gameState, colores, gameState.isEditingMode) {
-                                            if (gameState.isEditingMode) viewModel.manejarEdicionTablero(currentPos)
-                                            else if (gameState.selectedPosition == currentPos) viewModel.onCellSelected(null)
-                                            else if (gameState.modoJuego == GameMode.PUZZLE && gameState.selectedPosition != null) viewModel.validarJugadaPuzzle(gameState.selectedPosition!!, currentPos)
-                                            else viewModel.onCellSelected(currentPos)
+                                            // --- LÓGICA ORIGINAL RESTAURADA ---
+                                            if (gameState.isEditingMode) {
+                                                viewModel.manejarEdicionTablero(currentPos)
+                                            } else if (gameState.selectedPosition == currentPos) {
+                                                viewModel.onCellSelected(null)
+                                            } else if (gameState.modoJuego == GameMode.PUZZLE && gameState.selectedPosition != null) {
+                                                viewModel.validarJugadaPuzzle(gameState.selectedPosition!!, currentPos)
+                                            } else {
+                                                viewModel.onCellSelected(currentPos)
+                                            }
                                         }
                                     }
                                 }
@@ -303,16 +335,31 @@ fun GameScreen(
                 )
             }
 
+            // ... reemplaza tu bloque gameState.dialogoAcertijoVisible por este:
+
             if (gameState.dialogoAcertijoVisible) {
-                var respuestaUsuario by remember { mutableStateOf("") }
+                var respuestaUsuario by remember(gameState.acertijoActual) { mutableStateOf("") }
+
+                // 1. Lógica dinámica: Fase 0 (origen) vs Fase 1 (destino)
+                val esFaseDos = gameState.nivelAyudaEntregado >= 1
+                val costo = if (esFaseDos) 30 else 20
+                val tituloAyuda = if (esFaseDos) "¡Pista de Destino! 🎯" else "¡Pista de Inicio! 📍"
+                val descripcionAyuda = if (esFaseDos)
+                    "Gasta 30 puntos para revelar la casilla de destino."
+                else "Gasta 20 puntos para revelar la casilla de origen."
+
                 AlertDialog(
-                    onDismissRequest = { viewModel.cerrarDialogoAyuda() }, // <--- Llamamos a la limpieza
-                    title = { Text("¡Ayuda Disponible!", fontWeight = FontWeight.Bold) },
+                    onDismissRequest = { viewModel.cerrarDialogoAyuda() },
+                    title = { Text(tituloAyuda, fontWeight = FontWeight.Bold) },
                     text = {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            // AQUÍ INFORMAMOS EL COSTO
-                            Text(text = "¿Deseas gastar 20 puntos para obtener esta pista?", color = Color.Gray)
-                            Text(text = gameState.acertijoActual ?: "", fontWeight = FontWeight.Bold)
+                            Text(text = descripcionAyuda, color = Color.Gray)
+
+                            Text(
+                                text = gameState.acertijoActual ?: "Cargando acertijo...",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
 
                             if (gameState.mensajeError != null) {
                                 Text(text = gameState.mensajeError!!, color = Color.Red, fontSize = 12.sp)
@@ -322,19 +369,19 @@ fun GameScreen(
                                 value = respuestaUsuario,
                                 onValueChange = { respuestaUsuario = it },
                                 label = { Text("Respuesta") },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
                             )
                         }
                     },
                     confirmButton = {
                         TextButton(onClick = {
                             viewModel.verificarRespuestaAcertijo(respuestaUsuario)
-                            respuestaUsuario = ""
-                        }) { Text("Validar y Cobrar") }
+                        }) { Text("Validar") }
                     },
                     dismissButton = {
                         TextButton(onClick = {
-                            viewModel.cerrarDialogoAyuda() // <--- Llamamos a la limpieza
+                            viewModel.cerrarDialogoAyuda()
                             respuestaUsuario = ""
                         }) { Text("Cancelar") }
                     }
@@ -388,7 +435,46 @@ fun GameScreen(
                 )
             }
 
-// Este bloque va al final de tu GameScreen, debajo de todo,
+// Este bloque va al final de tu GameScreen,
+
+            // 1. Supongamos que tienes este estado (si ya tienes uno, usa el tuyo)
+// Puedes verificarlo directamente con gameState.isEditingMode si es lo mismo
+            if (gameState.isEditingMode) {
+                var nivelTarget by remember { mutableStateOf("") }
+
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(16.dp)
+                        .background(Color.Black.copy(alpha = 0.8f), RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                ) {
+                    Text("Portal de Niveles", color = Color.White, fontSize = 12.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextField(
+                            value = nivelTarget,
+                            onValueChange = { nivelTarget = it },
+                            modifier = Modifier.width(60.dp),
+                            singleLine = true,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.LightGray
+                            ),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(onClick = {
+                            val num = nivelTarget.toIntOrNull()
+                            if (num != null) {
+                                viewModel.debugCargarNivelDirecto(num)
+                            }
+                        }) {
+                            Text("IR")
+                        }
+                    }
+                }
+            }
+
 // para que se dibuje por encima de cualquier otra cosa.
             if (gameState.mensajeError != null && !gameState.dialogoAcertijoVisible) {
                 Box(
@@ -413,9 +499,11 @@ fun GameScreen(
                         )
                     }
                 }
+
             }
 
         }
+
     }
 }
 @Composable
@@ -455,26 +543,23 @@ fun RowScope.CasillaView(
             }
         }
 
-        // --- AQUÍ LA ANIMACIÓN CORRECTA ---
+        // Pista Origen
         if (gameState.casillaPista == position) {
             val infiniteTransition = rememberInfiniteTransition(label = "pista")
-
-            // CORRECCIÓN: Definimos el float explícitamente y usamos el método correcto
             val alpha by infiniteTransition.animateFloat(
-                initialValue = 0.3f,
-                targetValue = 0.9f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(800),
-                    repeatMode = RepeatMode.Reverse
-                ),
+                initialValue = 0.3f, targetValue = 0.9f,
+                animationSpec = infiniteRepeatable(animation = tween(800), repeatMode = RepeatMode.Reverse),
                 label = "alpha"
             )
-
             Canvas(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                drawCircle(
-                    color = Color.Yellow.copy(alpha = alpha),
-                    radius = size.minDimension / 2.2f
-                )
+                drawCircle(color = Color.Yellow.copy(alpha = alpha), radius = size.minDimension / 2.2f)
+            }
+        }
+
+        // Pista Destino
+        if (gameState.casillaDestinoPista == position) {
+            Canvas(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                drawCircle(color = Color.Green.copy(alpha = 0.6f), radius = size.minDimension / 2.2f)
             }
         }
 
@@ -483,7 +568,6 @@ fun RowScope.CasillaView(
                 piece = p,
                 isSelected = isSelected,
                 resId = obtenerResourcePieza(p.type, p.color, gameState.estiloSeleccionado),
-                simbolo = "", // Se quitó el argumento innecesario
                 esJaqueMate = gameState.esJaqueMate,
                 colorGanador = gameState.ganador
             )
@@ -601,6 +685,7 @@ fun FooterFirma(viewModel: BoardViewModel) {
                 }) { Text("Acceder") }
             }
         )
+
     }
 }
 @Composable
@@ -780,6 +865,8 @@ fun VideoFelicitacion(nivel: Int, onDismiss: () -> Unit) {
         50 -> R.raw.video_felicitacion_50
         60 -> R.raw.video_felicitacion_60
         70 -> R.raw.video_felicitacion_70
+        80 -> R.raw.video_felicitacion_80
+        90 -> R.raw.video_felicitacion_90
         else -> R.raw.victoria // Asegúrate de que victoria.mp3 exista en /raw
     }
 
